@@ -34,6 +34,7 @@ SLASH_SLASH = "//"
 DASH_DASH = "--"
 TRIPLE_QUOTE = '"""'
 
+
 def lang(name, comment_symbol, multistart=None, multiend=None):
     """
     Generate a language entry dictionary, given a name and comment symbol and
@@ -64,6 +65,8 @@ supported_languages = {
     ".h": c_lang,
 
     ".cl": c_lang,
+
+    ".css": c_lang,
 
     ".cpp": lang("cpp", SLASH_SLASH),
 
