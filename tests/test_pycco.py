@@ -5,13 +5,15 @@ import os
 import os.path
 import tempfile
 import time
+from datetime import timedelta
 
 import pytest
 
 import pycco.generate_index as generate_index
 import pycco.main as p
-from hypothesis import assume, example, given
-from hypothesis.strategies import booleans, lists, none, text, sampled_from, data
+from hypothesis import example, given, settings
+from hypothesis.strategies import booleans, lists, none, text
+from hypothesis.strategies import sampled_from
 from pycco.languages import supported_languages
 
 try:
@@ -20,19 +22,34 @@ except ImportError:
     from mock import patch
 
 
-
 PYTHON = supported_languages['.py']
 PYCCO_SOURCE = 'pycco/main.py'
 FOO_FUNCTION = """def foo():\n    return True"""
+TIMEOUT_MILLISECONDS = 900  # By default, hypothesis uses 200 which can be too short
 
 
-def get_language(data):
-    return data.draw(sampled_from(list(supported_languages.values())))
+# This can be run from the top-level directory with:
+#  pytest -s -v -x --cov
+
+def sample_language():
+    # Return this strategy so that we get values from the supported languages
+    # where we'll get a dictionary of language, comment-symbol, etc.
+    return sampled_from(list(supported_languages.values()))
+
+
+@given(lang=sample_language(), source=text())
+def test_parse(lang, source):
+    parsed = p.parse(source, lang)
+    for s in parsed:
+        # We should ALWAYS have a code_text and docs_text entry, for example
+        # {'docs_text': '', 'code_text': '\n'}
+        assert {"code_text", "docs_text"} == set(s.keys())
 
 
 @given(lists(text()), text())
 def test_shift(fragments, default):
-    if fragments == []:
+    # if fragments == []:
+    if not fragments:
         assert p.shift(fragments, default) == default
     else:
         fragments2 = copy.copy(fragments)
@@ -43,18 +60,9 @@ def test_shift(fragments, default):
 @given(text(), booleans(), text(min_size=1))
 @example("/foo", True, "0")
 def test_destination(filepath, preserve_paths, outdir):
-    dest = p.destination(
-        filepath, preserve_paths=preserve_paths, outdir=outdir)
+    dest = p.destination(filepath, preserve_paths=preserve_paths, outdir=outdir)
     assert dest.startswith(outdir)
     assert dest.endswith(".html")
-
-
-@given(data(), text())
-def test_parse(data, source):
-    lang = get_language(data)
-    parsed = p.parse(source, lang)
-    for s in parsed:
-        assert {"code_text", "docs_text"} == set(s.keys())
 
 
 def test_skip_coding_directive():
@@ -73,26 +81,22 @@ def test_multi_line_leading_spaces():
 
 
 def test_comment_with_only_cross_ref():
-    source = (
-        '''# ==Link Target==\n\ndef test_link():\n    """[[testing.py#link-target]]"""\n    pass'''
-    )
+    source = '''# ==Link Target==\n\ndef test_link():\n    """[[testing.py#link-target]]"""\n    pass'''
     sections = p.parse(source, PYTHON)
     p.highlight(sections, PYTHON, outdir=tempfile.gettempdir())
-    assert sections[1][
-        'docs_html'] == '<p><a href="testing.html#link-target">testing.py</a></p>'
+    assert sections[1]['docs_html'] == '<p><a href="testing.html#link-target">testing.py</a></p>'
 
 
 @given(text(), text())
 def test_get_language_specify_language(source, code):
-    assert p.get_language(
-        source, code, language_name="python") == supported_languages['.py']
-
+    assert p.get_language(source, code, language_name="python") == supported_languages['.py']
     with pytest.raises(ValueError):
         p.get_language(source, code, language_name="non-existent")
 
 
-@given(text() | none())
+@given(source=text() | none())
 def test_get_language_bad_source(source):
+    # Check that what we pass is? ...and what's the difference between source and code?
     code = "#!/usr/bin/python\n"
     code += FOO_FUNCTION
     assert p.get_language(source, code) == PYTHON
@@ -100,8 +104,9 @@ def test_get_language_bad_source(source):
         assert p.get_language(source, "badlang")
 
     msg = "Can't figure out the language!"
+    # Remember, the error raised by pytest is not the ValueError, so use .value
     try:
-        assert e.value.message == msg
+        assert str(e.value) == msg
     except AttributeError:
         assert e.value.args[0] == msg
 
@@ -114,19 +119,18 @@ def test_get_language_bad_code(code):
 
 @given(text(max_size=64))
 def test_ensure_directory(dir_name):
-    tempdir = os.path.join(tempfile.gettempdir(),
-                           str(int(time.time())), dir_name)
+    tempdir = os.path.join(tempfile.gettempdir(), str(int(time.time())), dir_name)
 
     # Use sanitization from function, but only for housekeeping. We
     # pass in the unsanitized string to the function.
     safe_name = p.remove_control_chars(dir_name)
-
     if not os.path.isdir(safe_name) and os.access(safe_name, os.W_OK):
         p.ensure_directory(tempdir)
         assert os.path.isdir(safe_name)
 
 
-def test_ensure_multiline_string_support():
+def test_ensure_multiline_string_support_quotes_separate():
+    # Test where the opening and closing quotes are on separate lines
     code = '''x = """
 multi-line-string
 """
@@ -140,9 +144,166 @@ def x():
     """'''
 
     docs_code_tuple_list = p.parse(code, PYTHON)
-
     assert docs_code_tuple_list[0]['docs_text'] == ''
     assert "#" not in docs_code_tuple_list[1]['docs_text']
+
+
+# For multi-line strings we can have triple-quotes:-
+#   adjacent opening, adjacent closing
+#   adjacent opening, trailing closing
+#   flying opening, adjacent closing
+#   flying opening, trailing closing
+
+def test_triple_string_assignment_adjacent_fore_and_aft():
+    code = '''
+s = """multi-line string
+    with tabs: quotes adjacent fore and aft"""
+x = 5
+y = 10
+    '''
+    docs_code_tuple_list = p.parse(code, PYTHON)
+    for line in docs_code_tuple_list:
+        # There should be no documentation detected
+        assert not line['docs_text']
+
+
+def test_triple_string_assignment_trailing_aft():
+    # Test with the closing quotes on a new line
+    # This FAILS in 0.6.0 putting two newlines into the docs_text with:
+    #
+    # {'docs_text': '\n\n', 'code_text': '\ns = """multi-line string\n  with some text\n'}
+    #
+    # The code_text is not closed (no triple-string). If something comes afterwards, such as
+    #   x = 5
+    # then we get:
+    #
+    # {'docs_text': '\nx = 5\ny = 10\n\n', 'code_text': '\ns = """multi-line string\n  with some text\n'}
+    #
+    # That is, the following lines are being absorbed as if they were comments
+    code = '''
+s = """multi-line string
+  with some text
+    """
+x = 5
+y = 10
+    '''
+    print('\ntrying', code)
+    docs_code_tuple_list = p.parse(code, PYTHON)
+    print('\nLines:', len(docs_code_tuple_list))
+    for line in docs_code_tuple_list:
+        # There should be no documentation detected
+        print(line)
+        assert not line['docs_text']
+
+
+def test_triple_string_assignment_flying_fore_adjacent_aft():
+    code = '''
+s = """
+multi-line string
+  with some text"""
+x = 5
+y = 10
+    '''
+    docs_code_tuple_list = p.parse(code, PYTHON)
+    for line in docs_code_tuple_list:
+        # There should be no documentation detected
+        assert not line['docs_text']
+
+
+def test_triple_string_assignment_flying_fore_trailing_aft():
+    code = '''
+s = """
+multi-line string
+  with some text
+  """
+x = 5
+y = 10
+    '''
+    docs_code_tuple_list = p.parse(code, PYTHON)
+    for line in docs_code_tuple_list:
+        # There should be no documentation detected
+        assert not line['docs_text']
+
+
+def test_triplesingle_string_assignment_trailing_aft():
+    # Test with the closing quotes on a new line
+    # This FAILS in 0.6.0 putting two newlines into the docs_text with:
+    #
+    # {'docs_text': '\n\n', 'code_text': '\ns = """multi-line string\n  with some text\n'}
+    #
+    # The code_text is not closed (no triple-string). If something comes afterwards, such as
+    #   x = 5
+    # then we get:
+    #
+    # {'docs_text': '\nx = 5\ny = 10\n\n', 'code_text': '\ns = """multi-line string\n  with some text\n'}
+    #
+    # That is, the following lines are being absorbed as if they were comments
+    code = """
+s = '''multi-line string
+  with some text
+    '''
+x = 5
+y = 10
+    """
+    print('\ntrying', code)
+    docs_code_tuple_list = p.parse(code, PYTHON)
+    print('\nLines:', len(docs_code_tuple_list))
+    for line in docs_code_tuple_list:
+        # There should be no documentation detected
+        print(line)
+        assert not line['docs_text']
+
+
+def test_triplesingle_string_assignment_flying_fore_trailing_aft():
+    code = """
+s = '''
+multi-line string
+  with some text
+  '''
+x = 5
+y = 10
+    """
+    docs_code_tuple_list = p.parse(code, PYTHON)
+    for line in docs_code_tuple_list:
+        # There should be no documentation detected
+        assert not line['docs_text']
+
+
+def test_embedded_triple_string():
+    # some perfectly legal assignment
+    # s = """
+    # multi-line string
+    #      """ + 'some_string' + """
+    #   with some text
+    #   """
+    #
+    # Fails in 0.6.0
+    code = '''
+s = """
+multi-line string
+    {0}
+  with some text
+  """      
+     '''.format(''' """ + 'some_string' + """ ''')
+    print(code)
+    docs_code_tuple_list = p.parse(code, PYTHON)
+    for line in docs_code_tuple_list:
+        # There should be no documentation detected
+        assert not line['docs_text']
+
+
+def test_assignment_in_triple_string():
+    code = '''
+s = """wibble""" + """
+something on the next line
+"""
+x = 5
+'''
+    print(code)
+    docs_code_tuple_list = p.parse(code, PYTHON)
+    for line in docs_code_tuple_list:
+        # There should be no documentation detected
+        assert not line['docs_text']
 
 
 def test_indented_block():
@@ -163,13 +324,15 @@ def test_generate_documentation():
     p.generate_documentation(PYCCO_SOURCE, outdir=tempfile.gettempdir())
 
 
-@given(booleans(), booleans(), data())
-def test_process(preserve_paths, index, data):
-    lang_name = data.draw(sampled_from([l["name"] for l in supported_languages.values()]))
-    p.process([PYCCO_SOURCE], preserve_paths=preserve_paths,
-              index=index,
-              outdir=tempfile.gettempdir(),
-              language=lang_name)
+@given(booleans(), booleans())
+@settings(deadline=timedelta(TIMEOUT_MILLISECONDS))   # This test needs more time
+def test_process(preserve_paths, index):
+    for lang in supported_languages.values():
+        lang_name = lang['name']
+        p.process([PYCCO_SOURCE], preserve_paths=preserve_paths,
+                  index=index,
+                  outdir=tempfile.gettempdir(),
+                  language=lang_name)
 
 
 @patch('pygments.lexers.guess_lexer')

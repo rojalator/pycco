@@ -2,6 +2,27 @@
 A list of the languages that Pycco supports, mapping the file extension to
 the name of the Pygments lexer and the symbol that indicates a comment. To
 add another language to Pycco's repertoire, add it here.
+
+The problem with this is that the one language that we supposedly specialise
+for (namely python) can't be properly specified here. For a start, triple-quote
+blocks can also use single quotes. Additionally, they can also be used in
+assignments and on single lines.
+
+e.g.
+
+    s = '''one one line'''
+
+    s2 = '''
+    across
+    several
+    lines'''
+
+    s3 = 'x' + '''some text''' + 'y'
+
+...and so on.
+
+None of these are documentation (comments)
+
 """
 
 __all__ = ("supported_languages",)

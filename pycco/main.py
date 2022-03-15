@@ -90,6 +90,130 @@ def _generate_documentation(file_path, code, outdir, preserve_paths, language):
     return generate_html(file_path, sections, preserve_paths=preserve_paths, outdir=outdir)
 
 
+def _parse_python(code, language):
+    """
+    This is a special case for python due to triple-strings being also
+    possible in assignations (s = '''...''', etc.), and the multistart
+    and multiend being identical - i.e. not /*...*/ or similar
+
+    Given a string of source code, parse out each comment and the code that
+    follows it, and create an individual **section** for it.
+    Sections take the form:
+
+        { "docs_text": ...,
+          "docs_html": ...,
+          "code_text": ...,
+          "code_html": ...,
+          "num":       ...
+        }
+    """
+    print('\n_parse_python special case!')
+    lines = code.split("\n")
+    sections = []
+    has_code = docs_text = code_text = ""
+
+    if lines[0].startswith("#!"):
+        # Skip over lines like "#!/usr/bin/env python3"
+        lines.pop(0)
+
+    # skip over lines like "# -*- coding: utf-8 -*-"
+    for linenum, line in enumerate(lines[:2]):
+        if re.search(r'coding[:=]\s*([-\w.]+)', lines[linenum]):
+            lines.pop(linenum)
+            break
+
+    def save(docs, code):
+        if docs or code:
+            sections.append({"docs_text": docs, "code_text": code})
+
+    print(lines, sections)
+
+    # Setup the variables to get ready to check for multiline comments
+    multi_line = False
+    multi_string = False
+    multi_indicator_single = "'''"
+    multi_indicator_double = '"""'
+    comment_matcher = language['comment_matcher']
+    print('comment_matcher ', comment_matcher)
+
+    for line in lines:
+        process_as_code = False
+        # Only go into multiline comments section when one of the delimiters is
+        # found to be at the start of a line
+        left_line = line.lstrip()
+        right_line = line.rstrip()
+        print('[{0}] [{1}] [{2}]'.format(line, left_line, right_line))
+
+        # OK, if we start with one of the multi-delimiters or end with the current delimiter...
+        toggle = False
+        the_delimiter = multi_indicator_double
+        has_multi_string = left_line.startswith(the_delimiter) or right_line.endswith(the_delimiter)
+
+
+        if any(left_line.startswith(delim) or right_line.endswith(delim) for delim in (multi_indicator_single, multi_indicator_double)):
+            multi_line = not multi_line
+            print('got any', left_line, multi_line, delim)
+
+            if multi_line \
+               and line.strip().endswith(multiend_double) \
+               and len(line.strip()) > len(multiend_double):
+                multi_line = False
+
+            if not line.strip().startswith(multistart_double) and not multi_line \
+               or multi_string:
+
+                process_as_code = True
+
+                if multi_string:
+                    multi_line = False
+                    multi_string = False
+                else:
+                    multi_string = True
+
+            else:
+                # Get rid of the delimiters so that they aren't in the final
+                # docs
+                line = line.replace(multistart_double, '')
+                line = line.replace(multiend_double, '')
+                docs_text += line.strip() + '\n'
+                indent_level = re.match(r"\s*", line).group(0)
+
+                if has_code and docs_text.strip():
+                    save(docs_text, code_text[:-1])
+                    code_text = code_text.split('\n')[-1]
+                    has_code = docs_text = ''
+
+        elif multi_line:
+            # Remove leading spaces
+            if re.match(r' {{{:d}}}'.format(len(indent_level)), line):
+                docs_text += line[len(indent_level):] + '\n'
+            else:
+                docs_text += line + '\n'
+
+        elif re.match(comment_matcher, line):
+            if has_code:
+                save(docs_text, code_text)
+                has_code = docs_text = code_text = ''
+            docs_text += re.sub(comment_matcher, "", line) + "\n"
+
+        else:
+            process_as_code = True
+
+        if process_as_code:
+            if code_text and any(line.lstrip().startswith(x)
+                                 for x in ['class ', 'def ', '@']):
+                if not code_text.lstrip().startswith("@"):
+                    save(docs_text, code_text)
+                    code_text = has_code = docs_text = ''
+
+            has_code = True
+            code_text += line + '\n'
+
+    save(docs_text, code_text)
+
+    return sections
+
+
 def parse(code, language):
     """
     Given a string of source code, parse out each comment and the code that
@@ -103,15 +227,19 @@ def parse(code, language):
           "num":       ...
         }
     """
+    # if language["name"] == "python":
+    #     return _parse_python(code, language)
 
     lines = code.split("\n")
     sections = []
     has_code = docs_text = code_text = ""
 
     if lines[0].startswith("#!"):
+        # Skip over lines like "#!/usr/bin/env python3"
         lines.pop(0)
 
     if language["name"] == "python":
+        # skip over lines like "# -*- coding: utf-8 -*-"
         for linenum, line in enumerate(lines[:2]):
             if re.search(r'coding[:=]\s*([-\w.]+)', lines[linenum]):
                 lines.pop(linenum)
@@ -119,10 +247,7 @@ def parse(code, language):
 
     def save(docs, code):
         if docs or code:
-            sections.append({
-                "docs_text": docs,
-                "code_text": code
-            })
+            sections.append({"docs_text": docs, "code_text": code})
 
     # Setup the variables to get ready to check for multiline comments
     multi_line = False
@@ -134,18 +259,14 @@ def parse(code, language):
         process_as_code = False
         # Only go into multiline comments section when one of the delimiters is
         # found to be at the start of a line
-        if multistart and multiend \
-           and any(line.lstrip().startswith(delim) or line.rstrip().endswith(delim)
+        if multistart and multiend and any(line.lstrip().startswith(delim) or line.rstrip().endswith(delim)
                    for delim in (multistart, multiend)):
             multi_line = not multi_line
 
-            if multi_line \
-               and line.strip().endswith(multiend) \
-               and len(line.strip()) > len(multiend):
+            if multi_line and line.strip().endswith(multiend) and len(line.strip()) > len(multiend):
                 multi_line = False
 
-            if not line.strip().startswith(multistart) and not multi_line \
-               or multi_string:
+            if not line.strip().startswith(multistart) and not multi_line or multi_string:
 
                 process_as_code = True
 
@@ -318,7 +439,7 @@ def generate_html(source, sections, preserve_paths=True, outdir=None):
     template found in `resources/pycco.html`.
 
     Pystache will attempt to recursively render context variables, so we must
-    replace any occurrences of `{{`, which is valid in some languages, with a
+    replace any occurences of `{{`, which is valid in some languages, with a
     "unique enough" identifier before rendering, and then post-process the
     rendered template and change the identifier back to `{{`.
     """
@@ -371,6 +492,7 @@ def compile_language(l):
 
 for entry in supported_languages.values():
     compile_language(entry)
+
 
 def get_language(source, code, language_name=None):
     """
@@ -515,11 +637,7 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
 
             try:
                 with open(dest, "wb") as f:
-                    f.write(generate_documentation(s, preserve_paths=preserve_paths,
-                                                   outdir=outdir,
-                                                   language=language,
-                                                   encoding=encoding))
-
+                    f.write(generate_documentation(s, preserve_paths=preserve_paths, outdir=outdir, language=language, encoding=encoding))
                 print("pycco: {} -> {}".format(s, dest))
                 generated_files.append(dest)
             except (ValueError, UnicodeDecodeError) as e:
@@ -527,11 +645,9 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
                     print("pycco [FAILURE]: {}, {}".format(s, e))
                 else:
                     raise
-
             if sources:
                 next_file()
         next_file()
-
         if index:
             with open(path.join(outdir, "index.html"), "wb") as f:
                 f.write(generate_index(generated_files, outdir))
