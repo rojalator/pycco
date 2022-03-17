@@ -57,6 +57,8 @@ import pygments
 from pygments import formatters, lexers
 
 from markdown import markdown
+from dycco import parse as dycco_parse
+
 from pycco.generate_index import generate_index
 from pycco.languages import supported_languages
 from pycco_resources import css as pycco_css
@@ -90,128 +92,15 @@ def _generate_documentation(file_path, code, outdir, preserve_paths, language):
     return generate_html(file_path, sections, preserve_paths=preserve_paths, outdir=outdir)
 
 
-def _parse_python(code, language):
+def _parse_python(code):
     """
-    This is a special case for python due to triple-strings being also
-    possible in assignations (s = '''...''', etc.), and the multistart
-    and multiend being identical - i.e. not /*...*/ or similar
-
-    Given a string of source code, parse out each comment and the code that
-    follows it, and create an individual **section** for it.
-    Sections take the form:
-
-        { "docs_text": ...,
-          "docs_html": ...,
-          "code_text": ...,
-          "code_html": ...,
-          "num":       ...
-        }
+    We deal with the special case of python which, ironically, pycco is rather bad at
+    as it thinks that triple-strings can only be docstrings, when they can occur anywhere.
+    Instead we ask dycco to do it for us (although dycco's sections are labelled with
+    'docs' and 'code' instead of 'docs_text' and 'code_text')
     """
-    print('\n_parse_python special case!')
-    lines = code.split("\n")
-    sections = []
-    has_code = docs_text = code_text = ""
-
-    if lines[0].startswith("#!"):
-        # Skip over lines like "#!/usr/bin/env python3"
-        lines.pop(0)
-
-    # skip over lines like "# -*- coding: utf-8 -*-"
-    for linenum, line in enumerate(lines[:2]):
-        if re.search(r'coding[:=]\s*([-\w.]+)', lines[linenum]):
-            lines.pop(linenum)
-            break
-
-    def save(docs, code):
-        if docs or code:
-            sections.append({"docs_text": docs, "code_text": code})
-
-    print(lines, sections)
-
-    # Setup the variables to get ready to check for multiline comments
-    multi_line = False
-    multi_string = False
-    multi_indicator_single = "'''"
-    multi_indicator_double = '"""'
-    comment_matcher = language['comment_matcher']
-    print('comment_matcher ', comment_matcher)
-
-    for line in lines:
-        process_as_code = False
-        # Only go into multiline comments section when one of the delimiters is
-        # found to be at the start of a line
-        left_line = line.lstrip()
-        right_line = line.rstrip()
-        print('[{0}] [{1}] [{2}]'.format(line, left_line, right_line))
-
-        # OK, if we start with one of the multi-delimiters or end with the current delimiter...
-        toggle = False
-        the_delimiter = multi_indicator_double
-        has_multi_string = left_line.startswith(the_delimiter) or right_line.endswith(the_delimiter)
-
-
-        if any(left_line.startswith(delim) or right_line.endswith(delim) for delim in (multi_indicator_single, multi_indicator_double)):
-            multi_line = not multi_line
-            print('got any', left_line, multi_line, delim)
-
-            if multi_line \
-               and line.strip().endswith(multiend_double) \
-               and len(line.strip()) > len(multiend_double):
-                multi_line = False
-
-            if not line.strip().startswith(multistart_double) and not multi_line \
-               or multi_string:
-
-                process_as_code = True
-
-                if multi_string:
-                    multi_line = False
-                    multi_string = False
-                else:
-                    multi_string = True
-
-            else:
-                # Get rid of the delimiters so that they aren't in the final
-                # docs
-                line = line.replace(multistart_double, '')
-                line = line.replace(multiend_double, '')
-                docs_text += line.strip() + '\n'
-                indent_level = re.match(r"\s*", line).group(0)
-
-                if has_code and docs_text.strip():
-                    save(docs_text, code_text[:-1])
-                    code_text = code_text.split('\n')[-1]
-                    has_code = docs_text = ''
-
-        elif multi_line:
-            # Remove leading spaces
-            if re.match(r' {{{:d}}}'.format(len(indent_level)), line):
-                docs_text += line[len(indent_level):] + '\n'
-            else:
-                docs_text += line + '\n'
-
-        elif re.match(comment_matcher, line):
-            if has_code:
-                save(docs_text, code_text)
-                has_code = docs_text = code_text = ''
-            docs_text += re.sub(comment_matcher, "", line) + "\n"
-
-        else:
-            process_as_code = True
-
-        if process_as_code:
-            if code_text and any(line.lstrip().startswith(x)
-                                 for x in ['class ', 'def ', '@']):
-                if not code_text.lstrip().startswith("@"):
-                    save(docs_text, code_text)
-                    code_text = has_code = docs_text = ''
-
-            has_code = True
-            code_text += line + '\n'
-
-    save(docs_text, code_text)
-
-    return sections
+    dycco_sections = dycco_parse(code)
+    return dycco_sections
 
 
 def parse(code, language):
@@ -227,95 +116,99 @@ def parse(code, language):
           "num":       ...
         }
     """
-    # if language["name"] == "python":
-    #     return _parse_python(code, language)
 
     lines = code.split("\n")
     sections = []
     has_code = docs_text = code_text = ""
 
-    if lines[0].startswith("#!"):
+    if language["name"] == "python":
+        dycco_sections = _parse_python(code)
+    elif lines[0].startswith("#!"):
         # Skip over lines like "#!/usr/bin/env python3"
         lines.pop(0)
 
-    if language["name"] == "python":
-        # skip over lines like "# -*- coding: utf-8 -*-"
-        for linenum, line in enumerate(lines[:2]):
-            if re.search(r'coding[:=]\s*([-\w.]+)', lines[linenum]):
-                lines.pop(linenum)
-                break
-
-    def save(docs, code):
+    def save(docs:str, code:str):
         if docs or code:
             sections.append({"docs_text": docs, "code_text": code})
 
-    # Setup the variables to get ready to check for multiline comments
-    multi_line = False
-    multi_string = False
-    multistart, multiend = language.get("multistart"), language.get("multiend")
-    comment_matcher = language['comment_matcher']
+    if language["name"] == "python":
+        # We need to turn dycco's sections into our own by concatenating into strings
+        # and then save()-ing them
+        for key, value in sorted(dycco_sections.items()):
+            # We sometimes get None returned as a list entry, so filter it out
+            docs_text = '\n'.join(filter(None, value['docs']))
+            code_text = '\n'.join(filter(None, value['code']))
+            # Trim off any spurious triple-quotes that we sometimes get
+            code_text = code_text.removeprefix('"""').removeprefix("'''")
+            save(docs_text, code_text)
+    else:
+        # Setup the variables to get ready to check for multiline comments
+        multi_line = False
+        multi_string = False
+        multistart, multiend = language.get("multistart"), language.get("multiend")
+        comment_matcher = language['comment_matcher']
 
-    for line in lines:
-        process_as_code = False
-        # Only go into multiline comments section when one of the delimiters is
-        # found to be at the start of a line
-        if multistart and multiend and any(line.lstrip().startswith(delim) or line.rstrip().endswith(delim)
-                   for delim in (multistart, multiend)):
-            multi_line = not multi_line
+        for line in lines:
+            process_as_code = False
+            # Only go into multiline comments section when one of the delimiters is
+            # found to be at the start of a line
+            if multistart and multiend and any(line.lstrip().startswith(delim) or line.rstrip().endswith(delim)
+                       for delim in (multistart, multiend)):
+                multi_line = not multi_line
 
-            if multi_line and line.strip().endswith(multiend) and len(line.strip()) > len(multiend):
-                multi_line = False
+                if multi_line and line.strip().endswith(multiend) and len(line.strip()) > len(multiend):
+                    multi_line = False
 
-            if not line.strip().startswith(multistart) and not multi_line or multi_string:
+                if not line.strip().startswith(multistart) and not multi_line or multi_string:
 
+                    process_as_code = True
+
+                    if multi_string:
+                        multi_line = False
+                        multi_string = False
+                    else:
+                        multi_string = True
+
+                else:
+                    # Get rid of the delimiters so that they aren't in the final
+                    # docs
+                    line = line.replace(multistart, '')
+                    line = line.replace(multiend, '')
+                    docs_text += line.strip() + '\n'
+                    indent_level = re.match(r"\s*", line).group(0)
+
+                    if has_code and docs_text.strip():
+                        save(docs_text, code_text[:-1])
+                        code_text = code_text.split('\n')[-1]
+                        has_code = docs_text = ''
+
+            elif multi_line:
+                # Remove leading spaces
+                if re.match(r' {{{:d}}}'.format(len(indent_level)), line):
+                    docs_text += line[len(indent_level):] + '\n'
+                else:
+                    docs_text += line + '\n'
+
+            elif re.match(comment_matcher, line):
+                if has_code:
+                    save(docs_text, code_text)
+                    has_code = docs_text = code_text = ''
+                docs_text += re.sub(comment_matcher, "", line) + "\n"
+
+            else:
                 process_as_code = True
 
-                if multi_string:
-                    multi_line = False
-                    multi_string = False
-                else:
-                    multi_string = True
+            if process_as_code:
+                if code_text and any(line.lstrip().startswith(x)
+                                     for x in ['class ', 'def ', '@']):
+                    if not code_text.lstrip().startswith("@"):
+                        save(docs_text, code_text)
+                        code_text = has_code = docs_text = ''
 
-            else:
-                # Get rid of the delimiters so that they aren't in the final
-                # docs
-                line = line.replace(multistart, '')
-                line = line.replace(multiend, '')
-                docs_text += line.strip() + '\n'
-                indent_level = re.match(r"\s*", line).group(0)
+                has_code = True
+                code_text += line + '\n'
 
-                if has_code and docs_text.strip():
-                    save(docs_text, code_text[:-1])
-                    code_text = code_text.split('\n')[-1]
-                    has_code = docs_text = ''
-
-        elif multi_line:
-            # Remove leading spaces
-            if re.match(r' {{{:d}}}'.format(len(indent_level)), line):
-                docs_text += line[len(indent_level):] + '\n'
-            else:
-                docs_text += line + '\n'
-
-        elif re.match(comment_matcher, line):
-            if has_code:
-                save(docs_text, code_text)
-                has_code = docs_text = code_text = ''
-            docs_text += re.sub(comment_matcher, "", line) + "\n"
-
-        else:
-            process_as_code = True
-
-        if process_as_code:
-            if code_text and any(line.lstrip().startswith(x)
-                                 for x in ['class ', 'def ', '@']):
-                if not code_text.lstrip().startswith("@"):
-                    save(docs_text, code_text)
-                    code_text = has_code = docs_text = ''
-
-            has_code = True
-            code_text += line + '\n'
-
-    save(docs_text, code_text)
+        save(docs_text, code_text)
 
     return sections
 
