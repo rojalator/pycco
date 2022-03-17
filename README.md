@@ -18,6 +18,8 @@ see:
 
 https://pycco-docs.github.io/pycco/
 
+This is a modified version that uses dycco 1.0.2 (from https://github.com/rojalator/dycco - pending acceptance into dycco itself) for python files
+
 Others:
 
 CoffeeScript (Original) - http://jashkenas.github.com/docco/

@@ -2,3 +2,4 @@ coveralls==1.9.2
 hypothesis==4.56.1
 mock~=2.0
 pytest-cov~=2.8.1
+dycco>=1.0.2
