@@ -8,7 +8,7 @@ description = (
 
 setup(
     name="Pycco",
-    version="0.7.0",
+    version="0.8.0",
     description=description,
     author="Zach Smith",
     author_email="subsetpark@gmail.com",

@@ -417,7 +417,7 @@ def get_language(source, code, language_name=None):
         raise ValueError("Can't figure out the language!")
 
 
-def destination(filepath, preserve_paths=True, outdir=None):
+def destination(filepath, preserve_paths=True, outdir=None, replace_dots=False):
     """
     Compute the destination HTML path for an input source file path. If the
     source is `lib/example.py`, the HTML will be at `docs/example.html`.
@@ -430,6 +430,14 @@ def destination(filepath, preserve_paths=True, outdir=None):
         name = re.sub(r"\.[^.]*$", "", filename)
     except ValueError:
         name = filename
+    # Now we want to, if required, replace dots in the file-name with
+    # underscores in case we have, say, xyz.py and xyz.css where the
+    # last file written would be xyz.html. Instead, produce
+    # xyz_py.html and xyz_css.html
+    if replace_dots:
+        # Get the old extension amd put it back on
+        name = name + path.splitext(filepath)[1]
+        name = name.replace('.', '_')
     if preserve_paths:
         name = path.join(dirname, name)
     dest = path.join(outdir, u"{}.html".format(name))
@@ -498,7 +506,8 @@ def _flatten_sources(sources):
 
 
 def process(sources, preserve_paths=True, outdir=None, language=None,
-            encoding="utf8", index=False, skip=False):
+            encoding="utf8", index=False, skip=False, underlines=False,
+            use_ascii=False, escape_html=False):
     """
     For each source file passed as argument, generate the documentation.
     """
@@ -521,7 +530,7 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
 
         def next_file():
             s = sources.pop(0)
-            dest = destination(s, preserve_paths=preserve_paths, outdir=outdir)
+            dest = destination(s, preserve_paths=preserve_paths, outdir=outdir, replace_dots=underlines)
 
             try:
                 os.makedirs(path.split(dest)[0])
@@ -627,6 +636,14 @@ def main():
                       dest='skip_bad_files',
                       help='Continue processing after hitting a bad file')
 
+    parser.add_argument('-a', '--asciidoc3', action='store_true', default=False, dest='use_ascii',
+                      help='Process with asciidoc3 instead of markdown (you will have to install asciidoc3, of course)')
+    parser.add_argument('--escape-html', action='store_true', default=False, dest='escape_html',
+                      help='Run the documentation through html.escape() before markdown or asciidoc3')
+
+    parser.add_argument('-u', '--underlines', action='store_true',
+                      help='Replace dots in file extension with underscores before adding the html extension (e.g. x.txt becomes x_txt.html)')
+
     parser.add_argument('sources', nargs='*')
 
     args = parser.parse_args()
@@ -637,7 +654,8 @@ def main():
 
     process(args.sources, outdir=outdir, preserve_paths=args.paths,
             language=args.language, index=args.generate_index,
-            skip=args.skip_bad_files)
+            skip=args.skip_bad_files, underlines=args.underlines,
+            use_ascii=args.use_ascii, escape_html=args.escape_html)
 
     # If the -w / \-\-watch option was present, monitor the source directories
     # for changes and re-generate documentation for source files whenever they
