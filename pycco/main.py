@@ -51,6 +51,7 @@ import os
 import re
 import sys
 import time
+import html
 from os import path
 
 import pygments
@@ -328,6 +329,8 @@ def highlight(sections, language, preserve_paths=True, outdir=None, use_ascii=Fa
             docs_text = unicode(section["docs_text"].decode('utf-8'))
         except NameError:
             docs_text = section['docs_text']
+        if escape_html:
+            docs_text = html.escape(docs_text)
         if use_ascii:
             # Process the documentation via asciidoc3 - using dycco
             # preprocess_docs expects a list
