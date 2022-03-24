@@ -57,7 +57,7 @@ import pygments
 from pygments import formatters, lexers
 
 from markdown import markdown
-from dycco import parse as dycco_parse
+from dycco import parse as dycco_parse, preprocess_docs
 
 from pycco.generate_index import generate_index
 from pycco.languages import supported_languages
@@ -65,11 +65,25 @@ from pycco_resources import css as pycco_css
 # This module contains all of our static resources.
 from pycco_resources import pycco_template
 
+# We have to muck about a bi
+# t because of asciidoc3's strange behaviour
+# See: [AttributeError: module 'asciidoc3' has no attribute 'messages'](https://gitlab.com/asciidoc3/asciidoc3/-/issues/5)
+# for the explanation
+
+import importlib.util
+
+ascii_location = None
+ascii_module = importlib.util.find_spec('asciidoc3')
+if ascii_module:
+    # We found a version of asciidoc3, so record where it is for later use by `preprocess_docs()`
+    ascii_location = ascii_module.submodule_search_locations[0] + '/asciidoc3.py'
+    import asciidoc3.asciidoc3api as AsciiDoc3API
+
 # === Main Documentation Generation Functions ===
 
 
 def generate_documentation(source, outdir=None, preserve_paths=True,
-                           language=None, encoding="utf8"):
+                           language=None, encoding="utf8", use_ascii=False, escape_html=False, single_file=False):
     """
     Generate the documentation for a source file by reading it in, splitting it
     up into comment/code sections, highlighting them for the appropriate
@@ -79,16 +93,19 @@ def generate_documentation(source, outdir=None, preserve_paths=True,
     if not outdir:
         raise TypeError("Missing the required 'outdir' keyword argument.")
     code = open(source, "rb").read().decode(encoding)
-    return _generate_documentation(source, code, outdir, preserve_paths, language)
+    return _generate_documentation(file_path=source, code=code, outdir=outdir,
+                                   preserve_paths=preserve_paths, language=language, use_ascii=use_ascii,
+                                   escape_html=escape_html, single_file=single_file)
 
 
-def _generate_documentation(file_path, code, outdir, preserve_paths, language):
+def _generate_documentation(file_path, code, outdir, preserve_paths, language, use_ascii, escape_html, single_file):
     """
     Helper function to allow documentation generation without file handling.
     """
-    language = get_language(file_path, code, language_name=language)
+    language = get_language(source=file_path, code=code, language_name=language)
     sections = parse(code, language)
-    highlight(sections, language, preserve_paths=preserve_paths, outdir=outdir)
+    highlight(sections=sections, language=language, preserve_paths=preserve_paths, outdir=outdir, use_ascii=use_ascii,
+              escape_html=escape_html, single_file=single_file)
     return generate_html(file_path, sections, preserve_paths=preserve_paths, outdir=outdir)
 
 
@@ -267,14 +284,17 @@ def preprocess(comment, preserve_paths=True, outdir=None):
 # === Highlighting the source code ===
 
 
-def highlight(sections, language, preserve_paths=True, outdir=None):
+def highlight(sections, language, preserve_paths=True, outdir=None, use_ascii=False, escape_html=False, single_file=False):
     """
     Highlights a single chunk of code using the **Pygments** module, and runs
-    the text of its corresponding comment through **Markdown**.
+    the text of its corresponding comment through **Markdown** or **Asciidoc3**
+    (if `use_ascii` is True).
 
     We process the entire file in a single call to Pygments by inserting little
     marker comments between each section and then splitting the result string
     wherever our markers occur.
+
+
     """
 
     if not outdir:
@@ -300,24 +320,32 @@ def highlight(sections, language, preserve_paths=True, outdir=None):
 
     for i, section in enumerate(sections):
         section["code_html"] = highlight_start + shift(fragments, "") + highlight_end
+        # For Python 3, where `unicode()` does not exist, we'll get `NameError`
+        # at which point we just assign it
         try:
             docs_text = unicode(section["docs_text"])
         except UnicodeError:
             docs_text = unicode(section["docs_text"].decode('utf-8'))
         except NameError:
             docs_text = section['docs_text']
-        section["docs_html"] = markdown(
-            preprocess(
-                docs_text,
-                preserve_paths=preserve_paths,
-                outdir=outdir
-            ),
-            extensions=[
-                'markdown.extensions.smarty',
-                'markdown.extensions.fenced_code',
-                'markdown.extensions.footnotes',
-            ]
-        )
+        if use_ascii:
+            # Process the documentation via asciidoc3 - using dycco
+            # preprocess_docs expects a list
+            section["docs_html"] = preprocess_docs(list([docs_text]), use_ascii=use_ascii, escape_html=escape_html, raw=single_file)
+        else:
+            # Just do as we always did... use Markdown
+            section["docs_html"] = markdown(
+                preprocess(
+                    docs_text,
+                    preserve_paths=preserve_paths,
+                    outdir=outdir
+                ),
+                extensions=[
+                    'markdown.extensions.smarty',
+                    'markdown.extensions.fenced_code',
+                    'markdown.extensions.footnotes',
+                ]
+            )
         section["num"] = i
 
     return sections
@@ -414,7 +442,7 @@ def get_language(source, code, language_name=None):
         # If pygments can't find any lexers, it will raise its own
         # subclass of ValueError. We will catch it and raise ours
         # for consistency.
-        raise ValueError("Can't figure out the language!")
+        raise ValueError("Can't figure out the language! {0}".format(language_name))
 
 
 def destination(filepath, preserve_paths=True, outdir=None, replace_dots=False):
@@ -507,7 +535,7 @@ def _flatten_sources(sources):
 
 def process(sources, preserve_paths=True, outdir=None, language=None,
             encoding="utf8", index=False, skip=False, underlines=False,
-            use_ascii=False, escape_html=False):
+            use_ascii=False, escape_html=False, single_file=False):
     """
     For each source file passed as argument, generate the documentation.
     """
@@ -539,7 +567,8 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
 
             try:
                 with open(dest, "wb") as f:
-                    f.write(generate_documentation(s, preserve_paths=preserve_paths, outdir=outdir, language=language, encoding=encoding))
+                    f.write(generate_documentation(s, preserve_paths=preserve_paths, outdir=outdir,
+                                                   language=language, encoding=encoding, use_ascii=use_ascii, escape_html=escape_html))
                 print("pycco: {} -> {}".format(s, dest))
                 generated_files.append(dest)
             except (ValueError, UnicodeDecodeError) as e:
@@ -550,6 +579,7 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
             if sources:
                 next_file()
         next_file()
+
         if index:
             with open(path.join(outdir, "index.html"), "wb") as f:
                 f.write(generate_index(generated_files, outdir))
@@ -640,6 +670,8 @@ def main():
                       help='Process with asciidoc3 instead of markdown (you will have to install asciidoc3, of course)')
     parser.add_argument('--escape-html', action='store_true', default=False, dest='escape_html',
                       help='Run the documentation through html.escape() before markdown or asciidoc3')
+    parser.add_argument('-f', '--single-file', action='store_true', default=False, dest='single_file',
+        help='Just produce a .md or .adoc file in single-column to be processed externally')
 
     parser.add_argument('-u', '--underlines', action='store_true',
                       help='Replace dots in file extension with underscores before adding the html extension (e.g. x.txt becomes x_txt.html)')
@@ -655,7 +687,8 @@ def main():
     process(args.sources, outdir=outdir, preserve_paths=args.paths,
             language=args.language, index=args.generate_index,
             skip=args.skip_bad_files, underlines=args.underlines,
-            use_ascii=args.use_ascii, escape_html=args.escape_html)
+            use_ascii=args.use_ascii, escape_html=args.escape_html,
+            single_file=args.single_file)
 
     # If the -w / \-\-watch option was present, monitor the source directories
     # for changes and re-generate documentation for source files whenever they
