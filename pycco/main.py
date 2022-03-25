@@ -58,7 +58,7 @@ import pygments
 from pygments import formatters, lexers
 
 from markdown import markdown
-from dycco import parse as dycco_parse, preprocess_docs
+from dycco import parse as dycco_parse, preprocess_docs, preprocess_code
 
 from pycco.generate_index import generate_index
 from pycco.languages import supported_languages
@@ -99,7 +99,7 @@ def generate_documentation(source, outdir=None, preserve_paths=True,
                                    escape_html=escape_html, single_file=single_file)
 
 
-def _generate_documentation(file_path, code, outdir, preserve_paths, language, use_ascii, escape_html, single_file):
+def _generate_documentation(file_path, code, outdir, preserve_paths, language, use_ascii, escape_html, single_file) -> bytes:
     """
     Helper function to allow documentation generation without file handling.
     """
@@ -107,7 +107,16 @@ def _generate_documentation(file_path, code, outdir, preserve_paths, language, u
     sections = parse(code, language)
     highlight(sections=sections, language=language, preserve_paths=preserve_paths, outdir=outdir, use_ascii=use_ascii,
               escape_html=escape_html, single_file=single_file)
-    return generate_html(file_path, sections, preserve_paths=preserve_paths, outdir=outdir)
+    if single_file:
+        # For a `single_file` we just weld all the gubbins together, the code
+        # sections will have been marked as such via `preprocess_code()`
+        out_lines = []
+        for section in sections:
+            out_lines.extend([section['docs_text'], '\n', section['code_html']])
+        out_text = '\n'.join(out_lines)
+        return bytes(out_text, 'utf-8')
+    else:
+        return generate_html(file_path, sections, preserve_paths=preserve_paths, outdir=outdir)
 
 
 def _parse_python(code):
@@ -294,33 +303,39 @@ def highlight(sections, language, preserve_paths=True, outdir=None, use_ascii=Fa
     We process the entire file in a single call to Pygments by inserting little
     marker comments between each section and then splitting the result string
     wherever our markers occur.
-
-
     """
 
     if not outdir:
         raise TypeError("Missing the required 'outdir' keyword argument.")
+    if not single_file:
+        # We are just going to dump with markers, so don't bother with pygments gubbins
+        divider_text = language["divider_text"]
+        lexer = language["lexer"]
+        divider_html = language["divider_html"]
 
-    divider_text = language["divider_text"]
-    lexer = language["lexer"]
-    divider_html = language["divider_html"]
+        joined_text = divider_text.join(
+            section["code_text"].rstrip() for section in sections
+        )
+        html_formatter = formatters.get_formatter_by_name("html")
 
-    joined_text = divider_text.join(
-        section["code_text"].rstrip() for section in sections
-    )
-    html_formatter = formatters.get_formatter_by_name("html")
-
-    output = pygments.highlight(
-        joined_text, lexer, html_formatter
-    ).replace(
-        highlight_start, ""
-    ).replace(
-        highlight_end, ""
-    )
-    fragments = re.split(divider_html, output)
+        output = pygments.highlight(
+            joined_text, lexer, html_formatter
+        ).replace(
+            highlight_start, ""
+        ).replace(
+            highlight_end, ""
+        )
+        fragments = re.split(divider_html, output)
 
     for i, section in enumerate(sections):
-        section["code_html"] = highlight_start + shift(fragments, "") + highlight_end
+        if single_file:
+            # We need to bracket the code section with the appropriate markers
+            # just get dycco to do it for us - preprocess_code expects a list
+            # and we also need to tell it the language
+            section['code_html'] = preprocess_code(list([section['code_text']]), use_ascii=use_ascii,
+                                                   raw=single_file, language_name=language['name'])
+        else:
+            section["code_html"] = highlight_start + shift(fragments, "") + highlight_end
         # For Python 3, where `unicode()` does not exist, we'll get `NameError`
         # at which point we just assign it
         try:
@@ -331,24 +346,26 @@ def highlight(sections, language, preserve_paths=True, outdir=None, use_ascii=Fa
             docs_text = section['docs_text']
         if escape_html:
             docs_text = html.escape(docs_text)
-        if use_ascii:
-            # Process the documentation via asciidoc3 - using dycco
-            # preprocess_docs expects a list
-            section["docs_html"] = preprocess_docs(list([docs_text]), use_ascii=use_ascii, escape_html=escape_html, raw=single_file)
-        else:
-            # Just do as we always did... use Markdown
-            section["docs_html"] = markdown(
-                preprocess(
-                    docs_text,
-                    preserve_paths=preserve_paths,
-                    outdir=outdir
-                ),
-                extensions=[
-                    'markdown.extensions.smarty',
-                    'markdown.extensions.fenced_code',
-                    'markdown.extensions.footnotes',
-                ]
-            )
+        if not single_file:
+            # We won't do any formatting if `single_file` is set
+            if use_ascii:
+                # Process the documentation via asciidoc3 - using dycco
+                # preprocess_docs expects a list
+                section["docs_html"] = preprocess_docs(list([docs_text]), use_ascii=use_ascii, escape_html=escape_html, raw=single_file)
+            else:
+                # Just do as we always did... use Markdown
+                section["docs_html"] = markdown(
+                    preprocess(
+                        docs_text,
+                        preserve_paths=preserve_paths,
+                        outdir=outdir
+                    ),
+                    extensions=[
+                        'markdown.extensions.smarty',
+                        'markdown.extensions.fenced_code',
+                        'markdown.extensions.footnotes',
+                    ]
+                )
         section["num"] = i
 
     return sections
@@ -375,8 +392,7 @@ def generate_html(source, sections, preserve_paths=True, outdir=None):
     csspath = path.relpath(path.join(outdir, "pycco.css"), path.split(dest)[0])
 
     for sect in sections:
-        sect["code_html"] = re.sub(
-            r"\{\{", r"__DOUBLE_OPEN_STACHE__", sect["code_html"])
+        sect["code_html"] = re.sub(r"\{\{", r"__DOUBLE_OPEN_STACHE__", sect["code_html"])
 
     rendered = pycco_template({
         "title": title,
@@ -390,28 +406,28 @@ def generate_html(source, sections, preserve_paths=True, outdir=None):
 
 # === Helpers & Setup ===
 
-def compile_language(l):
+def compile_language(available_language:dict):
     """
     Build out the appropriate matchers and delimiters for each language.
     """
-    language_name = l["name"]
-    comment_symbol = l["comment_symbol"]
+    language_name = available_language["name"]
+    comment_symbol = available_language["comment_symbol"]
 
     # Does the line begin with a comment?
-    l["comment_matcher"] = re.compile(r"^\s*{}\s?".format(comment_symbol))
+    available_language["comment_matcher"] = re.compile(r"^\s*{}\s?".format(comment_symbol))
 
     # The dividing token we feed into Pygments, to delimit the boundaries between
     # sections.
-    l["divider_text"] = "\n{}DIVIDER\n".format(comment_symbol)
+    available_language["divider_text"] = "\n{}DIVIDER\n".format(comment_symbol)
 
     # The mirror of `divider_text` that we expect Pygments to return. We can split
     # on this to recover the original sections.
-    l["divider_html"] = re.compile(
+    available_language["divider_html"] = re.compile(
         r'\n*<span class="c[1]?">{}DIVIDER</span>\n*'.format(comment_symbol)
     )
 
     # Get the Pygments Lexer for this language.
-    l["lexer"] = lexers.get_lexer_by_name(language_name)
+    available_language["lexer"] = lexers.get_lexer_by_name(language_name)
 
 
 for entry in supported_languages.values():
@@ -448,7 +464,7 @@ def get_language(source, code, language_name=None):
         raise ValueError("Can't figure out the language! {0}".format(language_name))
 
 
-def destination(filepath, preserve_paths=True, outdir=None, replace_dots=False):
+def destination(filepath, preserve_paths=True, outdir=None, replace_dots=False, extension='html'):
     """
     Compute the destination HTML path for an input source file path. If the
     source is `lib/example.py`, the HTML will be at `docs/example.html`.
@@ -471,7 +487,7 @@ def destination(filepath, preserve_paths=True, outdir=None, replace_dots=False):
         name = name.replace('.', '_')
     if preserve_paths:
         name = path.join(dirname, name)
-    dest = path.join(outdir, u"{}.html".format(name))
+    dest = path.join(outdir, u"{0}.{1}".format(name, extension))
     # If `join` is passed an absolute path, it will ignore any earlier path
     # elements. We will force outdir to the beginning of the path to avoid
     # writing outside our destination.
@@ -546,6 +562,13 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
     if not outdir:
         raise TypeError("Missing the required 'directory' keyword argument.")
 
+    # We have a default extension of `html`...
+    extension = 'html'
+    if single_file:
+        # ...but if we are wanting a single file, use Markdown's or
+        # Asciidoc3's extensions
+        extension = 'adoc' if use_ascii else 'md'
+
     # Make a copy of sources given on the command line. `main()` needs the
     # original list when monitoring for changed files.
     sources = sorted(_flatten_sources(sources))
@@ -561,7 +584,7 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
 
         def next_file():
             s = sources.pop(0)
-            dest = destination(s, preserve_paths=preserve_paths, outdir=outdir, replace_dots=underlines)
+            dest = destination(s, preserve_paths=preserve_paths, outdir=outdir, replace_dots=underlines, extension=extension)
 
             try:
                 os.makedirs(path.split(dest)[0])
@@ -571,7 +594,8 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
             try:
                 with open(dest, "wb") as f:
                     f.write(generate_documentation(s, preserve_paths=preserve_paths, outdir=outdir,
-                                                   language=language, encoding=encoding, use_ascii=use_ascii, escape_html=escape_html))
+                                                   language=language, encoding=encoding, use_ascii=use_ascii,
+                                                   escape_html=escape_html, single_file=single_file))
                 print("pycco: {} -> {}".format(s, dest))
                 generated_files.append(dest)
             except (ValueError, UnicodeDecodeError) as e:
