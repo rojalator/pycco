@@ -38,12 +38,23 @@ def sample_language():
 
 
 @given(lang=sample_language(), source=text())
+@example(lang=p.get_language('', '', 'python'), source='/')
 def test_parse(lang, source):
-    parsed = p.parse(source, lang)
-    for s in parsed:
-        # We should ALWAYS have a code_text and docs_text entry, for example
-        # {'docs_text': '', 'code_text': '\n'}
-        assert {"code_text", "docs_text"} == set(s.keys())
+    # Note that as we now use dycco (which calls Python's AST) we have to pass
+    # valid code - hypothesis sometimes doesn't do that. The older pycco code passed this
+    # even with invalid source-code for the language - that's because skipping is only done
+    # in pycco's process() not in its parse()
+    try:
+        parsed = p.parse(source, lang)
+    except SyntaxError:
+        print('***got syntax error***', lang)
+        if not lang['name'] == 'python':
+           raise
+    else:
+        for s in parsed:
+            # We should ALWAYS have a code_text and docs_text entry, for example
+            # {'docs_text': '', 'code_text': '\n'}
+            assert {"code_text", "docs_text"} == set(s.keys())
 
 
 @given(lists(text()), text())

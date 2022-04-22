@@ -21,7 +21,7 @@ e.g.
 
 ...and so on.
 
-None of these are documentation (comments)
+None of these are documentation (comments) nor docstrings
 
 """
 
@@ -52,7 +52,7 @@ def lang(name, comment_symbol, multistart=None, multiend=None):
 c_lang = lang("c", SLASH_SLASH, SLASH_STAR, STAR_SLASH)
 
 supported_languages = {
-    ".coffee": lang("coffee-script", HASH, "###", "###"),  # <--- FIXME: process .coffee files differently.
+    ".coffee": lang("coffee-script", HASH, "###", "###"),  # <--- We might need to process .coffee files differently.
 
     ".pl": lang("perl", HASH),
 
@@ -66,9 +66,9 @@ supported_languages = {
 
     ".cl": c_lang,
 
-    ".css": c_lang,
+    ".css": lang("css", SLASH_SLASH, SLASH_STAR, STAR_SLASH), # Note, strictly, css has no single-line comment type
 
-    ".cpp": lang("cpp", SLASH_SLASH),  # <-- BUGBUG: This appears to be incorrect, it should be c_lang
+    ".cpp": lang("cpp", SLASH_SLASH, SLASH_STAR, STAR_SLASH),  # This was incorrect, it should include SLASH_STAR, STAR_SLASH
 
     ".js": lang("javascript", SLASH_SLASH, SLASH_STAR, STAR_SLASH),
 
@@ -76,7 +76,7 @@ supported_languages = {
 
     ".py": lang("python", HASH, TRIPLE_QUOTE, TRIPLE_QUOTE),
 
-    ".pyx": lang("cython", HASH, TRIPLE_QUOTE, TRIPLE_QUOTE),  # <-- FIXME: we need to catch (p|c - ython)
+    ".pyx": lang("cython", HASH, TRIPLE_QUOTE, TRIPLE_QUOTE),  # <-- Cython is not passed to dycco)
 
     ".scm": lang("scheme", ";;", "#|", "|#"),
 
