@@ -31,6 +31,11 @@ saving it into a `docs` folder by default.
 
 The [source for Pycco](https://github.com/pycco-docs/pycco) is available on GitHub,
 and released under the MIT license.
+This is a [modified version](https://github.com/rojalator/pycco) that fixes a number
+of bugs ([such as this](https://github.com/pycco-docs/pycco/issues/120) and [this](https://github.com/pycco-docs/pycco/issues/108))
+by using a modified [dycco](https://github.com/rojalator/dycco) to handle Python files.
+
+This version will also produce stand-alone `.md` files and `.adoc` (asciidoc) files.
 
 To install Pycco, simply
 
@@ -41,6 +46,16 @@ Or, to install the latest source
     git clone git://github.com/pycco-docs/pycco.git
     cd pycco
     python setup.py install
+
+or
+
+    git clone git://github.com/rojalator/pycco.git
+
+(You'll need to
+
+    pip install https://github.com/rojalator/dycco
+
+for this pycco version).
 """
 
 from __future__ import absolute_import, print_function
