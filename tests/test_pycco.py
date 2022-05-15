@@ -87,8 +87,9 @@ def test_multi_line_leading_spaces():
     source = "# This is a\n# comment that\n# is indented\n"
     source += FOO_FUNCTION
     parsed = p.parse(source, PYTHON)
-    # The resulting comment has leading spaces stripped out.
-    assert parsed[0]["docs_text"] == "This is a\ncomment that\nis indented\n"
+    # The resulting comment has leading spaces stripped out...well, not really:
+    # Dycco's behaviour is subtly different
+    assert parsed[0]["docs_text"] == "This is a\n comment that\n is indented"
 
 
 def test_comment_with_only_cross_ref():
@@ -114,12 +115,13 @@ def test_get_language_bad_source(source):
     with pytest.raises(ValueError) as e:
         assert p.get_language(source, "badlang")
 
+    # RJL: Pygments now returns 'text only' as the language, so just use startswith
     msg = "Can't figure out the language!"
     # Remember, the error raised by pytest is not the ValueError, so use .value
     try:
-        assert str(e.value) == msg
+        assert str(e.value).startswith(msg)
     except AttributeError:
-        assert e.value.args[0] == msg
+        assert e.value.args[0].startswith(msg)
 
 
 @given(text() | none())
@@ -317,18 +319,19 @@ x = 5
         assert not line['docs_text']
 
 
-def test_indented_block():
-
-    code = '''"""To install Pycco, simply
-
-    pip install pycco
-"""
-'''
-    parsed = p.parse(code, PYTHON)
-    highlighted = p.highlight(parsed, PYTHON, outdir=tempfile.gettempdir())
-    pre_block = highlighted[0]['docs_html']
-    assert '<pre>' in pre_block
-    assert '</pre>' in pre_block
+# This is now invalid due to dycco's processing
+# def test_indented_block():
+#
+#     code = '''"""To install Pycco, simply
+#
+#     pip install pycco
+# """
+# '''
+#     parsed = p.parse(code, PYTHON)
+#     highlighted = p.highlight(parsed, PYTHON, outdir=tempfile.gettempdir())
+#     pre_block = highlighted[0]['docs_html']
+#     assert '<pre>' in pre_block
+#     assert '</pre>' in pre_block
 
 
 def test_generate_documentation():
