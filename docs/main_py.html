@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>main.py</title>
+  <link rel="stylesheet" href="pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>main.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      <p>&ldquo;<strong>Pycco</strong>&rdquo; is a Python port of <a href="http://jashkenas.github.com/docco/">Docco</a>:
+the original quick-and-dirty, hundred-line-long, literate-programming-style
+documentation generator. It produces HTML that displays your comments alongside
+your code. Comments are passed through <a href="http://daringfireball.net/projects/markdown/syntax">Markdown</a> and
+<a href="https://python-markdown.github.io/extensions/footnotes/">SmartyPants</a><sup id="fnref:extensions"><a class="footnote-ref" href="#fn:extensions">1</a></sup>, while code is passed through
+<a href="http://pygments.org/">Pygments</a> for syntax highlighting.</p>
+<p>This page is the result of running Pycco against its own source file.</p>
+<p>If you install Pycco, you can run it from the command-line:</p>
+<pre><code>pycco src/*.py
+</code></pre>
+<p>This will generate linked HTML documentation for the named source files,
+saving it into a <code>docs</code> folder by default.</p>
+<p>The <a href="https://github.com/pycco-docs/pycco">source for Pycco</a> is available on GitHub,
+and released under the MIT license.
+This is a <a href="https://github.com/rojalator/pycco">modified version</a> that fixes a number
+of bugs (<a href="https://github.com/pycco-docs/pycco/issues/120">such as this</a> and <a href="https://github.com/pycco-docs/pycco/issues/108">this</a>)
+by using a modified <a href="https://github.com/rojalator/dycco">dycco</a> to handle Python files.</p>
+<p>This version will also produce stand-alone <code>.md</code> files and <code>.adoc</code> (asciidoc) files.</p>
+<p>To install Pycco, simply</p>
+<pre><code>pip install pycco
+</code></pre>
+<p>Or, to install the latest source</p>
+<pre><code>git clone git://github.com/pycco-docs/pycco.git
+cd pycco
+python setup.py install
+</code></pre>
+<p>or</p>
+<pre><code>git clone git://github.com/rojalator/pycco.git
+</code></pre>
+<p>(You&rsquo;ll need to</p>
+<pre><code>pip install https://github.com/rojalator/dycco
+</code></pre>
+<p>for this pycco version).</p>
+<div class="footnote">
+<hr />
+<ol>
+<li id="fn:extensions">
+<p>Three extensions to Markdown are available:</p>
+<ol>
+<li><a href="https://python-markdown.github.io/extensions/smarty/">SmartyPants</a></li>
+<li><a href="https://python-markdown.github.io/extensions/fenced_code_blocks/">Fenced code blocks</a></li>
+<li><a href="https://python-markdown.github.io/extensions/footnotes/">Footnotes</a></li>
+</ol>
+<p><a class="footnote-backref" href="#fnref:extensions" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+</li>
+</ol>
+</div>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      <p>from <strong>future</strong> import absolute_import, print_function</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      <p>Import our external dependencies.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">html</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">suppress</span>
+<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
+<span class="kn">import</span> <span class="nn">unicodedata</span>
+<span class="kn">import</span> <span class="nn">pygments</span>
+<span class="kn">from</span> <span class="nn">pygments</span> <span class="kn">import</span> <span class="n">formatters</span><span class="p">,</span> <span class="n">lexers</span>
+<span class="kn">from</span> <span class="nn">markdown</span> <span class="kn">import</span> <span class="n">markdown</span>
+<span class="kn">from</span> <span class="nn">dycco</span> <span class="kn">import</span> <span class="n">parse</span> <span class="k">as</span> <span class="n">dycco_parse</span><span class="p">,</span> <span class="n">preprocess_docs</span><span class="p">,</span> <span class="n">preprocess_code</span>
+<span class="kn">from</span> <span class="nn">pycco.generate_index</span> <span class="kn">import</span> <span class="n">generate_index</span>
+<span class="kn">from</span> <span class="nn">pycco.languages</span> <span class="kn">import</span> <span class="n">supported_languages</span>
+<span class="kn">from</span> <span class="nn">pycco_resources</span> <span class="kn">import</span> <span class="n">css</span> <span class="k">as</span> <span class="n">pycco_css</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-3'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-3'>#</a>
+      </div>
+      <p>This module contains all of our static resources.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="kn">from</span> <span class="nn">pycco_resources</span> <span class="kn">import</span> <span class="n">pycco_template</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-4'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-4'>#</a>
+      </div>
+      <p>We have to muck about a bit because of asciidoc3&rsquo;s strange behaviour
+ See: <a href="https://gitlab.com/asciidoc3/asciidoc3/-/issues/5">AttributeError: module &lsquo;asciidoc3&rsquo; has no attribute &lsquo;messages&rsquo;</a>
+ for the explanation</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="kn">import</span> <span class="nn">importlib.util</span>
+<span class="n">ascii_location</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">ascii_module</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">find_spec</span><span class="p">(</span><span class="s1">&#39;asciidoc3&#39;</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">ascii_module</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-5'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-5'>#</a>
+      </div>
+      <p>We found a version of asciidoc3, so record where it is for later use by <code>preprocess_docs()</code></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">ascii_location</span> <span class="o">=</span> <span class="n">ascii_module</span><span class="o">.</span><span class="n">submodule_search_locations</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;/asciidoc3.py&#39;</span>
+    <span class="kn">import</span> <span class="nn">asciidoc3.asciidoc3api</span> <span class="k">as</span> <span class="nn">AsciiDoc3API</span>  <span class="c1"># noqa</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-6'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-6'>#</a>
+      </div>
+      <h3><span id="main-documentation-generation-functions" href="main-documentation-generation-functions"> Main Documentation Generation Functions </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-7'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-7'>#</a>
+      </div>
+      <p>Generate the documentation for a source file by reading it in, splitting it
+up into comment/code sections, highlighting them for the appropriate
+language, and merging them into an HTML template.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">generate_documentation</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                           <span class="n">language</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf8&quot;</span><span class="p">,</span> <span class="n">use_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">escape_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">single_file</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">outdir</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Missing the required &#39;outdir&#39; keyword argument.&quot;</span><span class="p">)</span>
+    <span class="n">code</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">encoding</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_generate_documentation</span><span class="p">(</span><span class="n">file_path</span><span class="o">=</span><span class="n">source</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="n">code</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">,</span>
+                                   <span class="n">preserve_paths</span><span class="o">=</span><span class="n">preserve_paths</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span> <span class="n">use_ascii</span><span class="o">=</span><span class="n">use_ascii</span><span class="p">,</span>
+                                   <span class="n">escape_html</span><span class="o">=</span><span class="n">escape_html</span><span class="p">,</span> <span class="n">single_file</span><span class="o">=</span><span class="n">single_file</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-8'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-8'>#</a>
+      </div>
+      <p>Helper function to allow documentation generation without file handling.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">_generate_documentation</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">outdir</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="p">,</span> <span class="n">language</span><span class="p">,</span> <span class="n">use_ascii</span><span class="p">,</span> <span class="n">escape_html</span><span class="p">,</span>
+                            <span class="n">single_file</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+    <span class="n">language</span> <span class="o">=</span> <span class="n">get_language</span><span class="p">(</span><span class="n">source</span><span class="o">=</span><span class="n">file_path</span><span class="p">,</span> <span class="n">code</span><span class="o">=</span><span class="n">code</span><span class="p">,</span> <span class="n">language_name</span><span class="o">=</span><span class="n">language</span><span class="p">)</span>
+    <span class="n">sections</span> <span class="o">=</span> <span class="n">parse</span><span class="p">(</span><span class="n">code</span><span class="p">,</span> <span class="n">language</span><span class="p">)</span>
+    <span class="n">highlight</span><span class="p">(</span><span class="n">sections</span><span class="o">=</span><span class="n">sections</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="n">preserve_paths</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">,</span> <span class="n">use_ascii</span><span class="o">=</span><span class="n">use_ascii</span><span class="p">,</span>
+              <span class="n">escape_html</span><span class="o">=</span><span class="n">escape_html</span><span class="p">,</span> <span class="n">single_file</span><span class="o">=</span><span class="n">single_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">single_file</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-9'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-9'>#</a>
+      </div>
+      <p>For a <code>single_file</code> we just weld all the gubbins together, the code
+ sections will have been marked as such via <code>preprocess_code()</code></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="n">out_lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">sections</span><span class="p">:</span>
+            <span class="n">out_lines</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">section</span><span class="p">[</span><span class="s1">&#39;docs_text&#39;</span><span class="p">],</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">section</span><span class="p">[</span><span class="s1">&#39;code_html&#39;</span><span class="p">]])</span>
+        <span class="n">out_text</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_lines</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">out_text</span><span class="p">,</span> <span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">generate_html</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="n">sections</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="n">preserve_paths</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-10'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-10'>#</a>
+      </div>
+      <p>We deal with the special case of python which, ironically, Pycco is rather bad at
+as it thinks that triple-strings can only be docstrings, when they can occur anywhere.
+Instead we ask dycco to do it for us (although dycco&rsquo;s sections are labelled with
+&lsquo;docs&rsquo; and &lsquo;code&rsquo; instead of &lsquo;docs_text&rsquo; and &lsquo;code_text&rsquo;).
+There is no guarantee the dycco can parse <strong>Cython</strong> files.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">_parse_python</span><span class="p">(</span><span class="n">code</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="n">dycco_sections</span> <span class="o">=</span> <span class="n">dycco_parse</span><span class="p">(</span><span class="n">code</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dycco_sections</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-11'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-11'>#</a>
+      </div>
+      <h4><span id="parse" href="parse"> PARSE </span></h4>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-12'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-12'>#</a>
+      </div>
+      <p>Given a string of source code, parse out each comment and the code that
+follows it, and create an individual <strong>section</strong> for it.
+Sections take the form:</p>
+<pre><code>{ "docs_text": ...,
+  "docs_html": ...,
+  "code_text": ...,
+  "code_html": ...,
+  "num":       ...
+}
+</code></pre>
+<p>We process the source-code using the following method - the diagram shows our thinking:</p>
+<p><a href="./jsp.jpg" title="Processing overview (click to enlarge)"><img src="./jsp.jpg" width="100%"/></a></p>
+<p>We have (logically) 3 parts of the file: the first line-group, the middle line-group
+and the last line.</p>
+<p>Each line can be:&ndash;</p>
+<ol>
+<li>multi_comment_start (e.g. <code>/*</code> or <code>/* SOME TEXT</code>)</li>
+<li>multi_comment_end   (e.g. <code>*/</code> or <code>SOME TEXT */</code>)</li>
+<li>multi_comment_start_end (e.g. <code>/* SOME TEXT */</code>)</li>
+<li>single_comment_mark (e.g. <code>//</code>)</li>
+<li>code</li>
+<li>a comment line in a multi_comment</li>
+<li>a code line with a trailing multi_comment_start_end:<pre><code>x = 5; /* a comment */
+</code></pre>
+</li>
+</ol>
+<p>We can simplify things my turning <code>multi_comment_start_end</code> lines into
+<code>single_comment_mark</code> lines.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">parse</span><span class="p">(</span><span class="n">source_code</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">source_language</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="n">lines</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">source_code</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">sections</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">has_code</span> <span class="o">=</span> <span class="n">docs_text</span> <span class="o">=</span> <span class="n">code_text</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-13'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-13'>#</a>
+      </div>
+      <p><em>For Python, we just call dycco&rsquo;s routines via our <code>_parse_python()</code></em>
+ It has to be valid code or we&rsquo;ll get SyntaxError from the AST handler</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="n">source_language</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;python&quot;</span><span class="p">:</span>
+        <span class="n">dycco_sections</span> <span class="o">=</span> <span class="n">_parse_python</span><span class="p">(</span><span class="n">source_code</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">lines</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#!&quot;</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-14'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-14'>#</a>
+      </div>
+      <p>Skip over lines like &ldquo;#!/usr/bin/env python3&rdquo;</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="n">lines</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-15'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-15'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="n">docs</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">code</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">docs</span> <span class="ow">or</span> <span class="n">code</span><span class="p">:</span>
+            <span class="n">sections</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;docs_text&quot;</span><span class="p">:</span> <span class="n">docs</span><span class="p">,</span> <span class="s2">&quot;code_text&quot;</span><span class="p">:</span> <span class="n">code</span><span class="p">})</span>
+    <span class="k">if</span> <span class="n">source_language</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;python&quot;</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-16'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-16'>#</a>
+      </div>
+      <p>If we used dycco for Python then we need to turn dycco&rsquo;s sections [that we got via <code>_parse_python()</code>]
+ into our own by concatenating into strings and then <code>save()</code>-ing them</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dycco_sections</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-17'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-17'>#</a>
+      </div>
+      <p>We sometimes get None returned as a list entry, so filter it out</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">docs_text</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">value</span><span class="p">[</span><span class="s1">&#39;docs&#39;</span><span class="p">]))</span>
+            <span class="n">code_text</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">value</span><span class="p">[</span><span class="s1">&#39;code&#39;</span><span class="p">]))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-18'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-18'>#</a>
+      </div>
+      <p>Trim off any spurious triple-quotes that we sometimes get</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">code_text</span> <span class="o">=</span> <span class="n">code_text</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s1">&#39;&quot;&quot;&quot;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="s2">&quot;&#39;&#39;&#39;&quot;</span><span class="p">)</span>
+            <span class="n">save</span><span class="p">(</span><span class="n">docs_text</span><span class="p">,</span> <span class="n">code_text</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-19'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-19'>#</a>
+      </div>
+      <p>For not-Python, setup the variables to get ready to check for multiline comments</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="n">multi_line</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">multi_string</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">multi_comment_start</span><span class="p">,</span> <span class="n">multi_comment_end</span> <span class="o">=</span> <span class="n">source_language</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;multistart&quot;</span><span class="p">),</span> <span class="n">source_language</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;multiend&quot;</span><span class="p">)</span>
+        <span class="n">comment_matcher</span> <span class="o">=</span> <span class="n">source_language</span><span class="p">[</span><span class="s1">&#39;comment_matcher&#39;</span><span class="p">]</span>
+        <span class="n">single_line_comment_symbol</span> <span class="o">=</span> <span class="n">source_language</span><span class="p">[</span><span class="s1">&#39;comment_symbol&#39;</span><span class="p">]</span>
+        <span class="n">in_multi_comment</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">process_as_code</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">converted_lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-20'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-20'>#</a>
+      </div>
+      <p>Note that the <code>continue</code> saves a lot of <code>if...else</code> heartache
+ What about // some text // some more text
+ or /<em> comment </em>/ // comment
+ or /<em> comment </em>/  /<em> another comment </em>/
+ or /<em> comment </em>/ x = 5; /<em> another comment </em>/
+ or // summat /<em> comment </em>/</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">stripped_line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">multi_comment_start</span><span class="p">)</span> <span class="ow">and</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">multi_comment_end</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-21'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-21'>#</a>
+      </div>
+      <p>Case 3: multi-line on a single line:
+ it&rsquo;s really single line, so turn it into one</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="n">stripped_line</span> <span class="o">=</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="n">multi_comment_end</span><span class="p">)</span>
+                <span class="n">stripped_line</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">single_line_comment_symbol</span><span class="p">,</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="n">multi_comment_start</span><span class="p">)])</span>
+                <span class="n">converted_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stripped_line</span><span class="p">)</span>
+                <span class="k">continue</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-22'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-22'>#</a>
+      </div>
+      <p>Convert multi-comments when we find them: we check in_multi_comment
+ so that we can deal with coffee-script&rsquo;s ### and ###</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="k">if</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">multi_comment_start</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">in_multi_comment</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-23'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-23'>#</a>
+      </div>
+      <p>Case 1: just starts with a multi-line marker</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="n">stripped_line</span> <span class="o">=</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">single_line_comment_symbol</span><span class="p">,</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">removeprefix</span><span class="p">(</span><span class="n">multi_comment_start</span><span class="p">)])</span>
+                <span class="n">converted_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stripped_line</span><span class="p">)</span>
+                <span class="n">in_multi_comment</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">in_multi_comment</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">multi_comment_end</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-24'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-24'>#</a>
+      </div>
+      <p>Case 6: We&rsquo;re in a multi-comment so just add it
+ DON&rsquo;T ADD THE STRIPPED LINE
+ converted_lines.append(single_line_comment_symbol + line)</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="n">converted_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">single_line_comment_symbol</span><span class="p">,</span> <span class="n">stripped_line</span><span class="p">]))</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">in_multi_comment</span> <span class="ow">and</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">multi_comment_end</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-25'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-25'>#</a>
+      </div>
+      <p>Case 2: Don&rsquo;t strip the leading spaces
+ stripped_line = line.rstrip().removesuffix(multi_comment_end)</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="n">stripped_line</span> <span class="o">=</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="n">multi_comment_end</span><span class="p">)</span>
+                <span class="n">converted_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">single_line_comment_symbol</span><span class="p">,</span> <span class="n">stripped_line</span><span class="p">]))</span>
+                <span class="n">in_multi_comment</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">continue</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-26'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-26'>#</a>
+      </div>
+      <p>TODO: not sure about the following: it converts trailing /<em>&hellip;</em>/ into //
+ TODO: BUT // is not moved into the comment area whereas the old code WOULD
+ TODO: move /<em>&hellip;</em>/ into it
+ if stripped_line.endswith(multi_comment_end) and multi_comment_start in stripped_line:
+     # Case 7
+     # break it into the code and the comment, removing markers
+     snipped:list = line.removesuffix(multi_comment_end).split(multi_comment_start)
+     # Then join it together using the single line comment marker
+     converted_lines.append(single_line_comment_symbol.join(snipped))
+     continue</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-27'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-27'>#</a>
+      </div>
+      <p>Case 5: If we reach here, we&rsquo;ve just got plain old code, at last</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">converted_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-28'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-28'>#</a>
+      </div>
+      <p>for i, line in enumerate(converted_lines):
+     print(i, line)
+ assert False
+ in_multi_comment = False</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">converted_lines</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-29'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-29'>#</a>
+      </div>
+      <p>Only go into multiline comments section when one of the delimiters is
+ found to be at the start of a line</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="k">if</span> <span class="n">multi_comment_start</span> <span class="ow">and</span> <span class="n">multi_comment_end</span> \
+                <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">lstrip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">delim</span><span class="p">)</span> <span class="ow">or</span> <span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">delim</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">delim</span> <span class="ow">in</span> <span class="p">(</span><span class="n">multi_comment_start</span><span class="p">,</span> <span class="n">multi_comment_end</span><span class="p">)):</span>
+                <span class="n">multi_line</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">multi_line</span>
+                <span class="k">if</span> <span class="n">multi_line</span> <span class="ow">and</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">multi_comment_end</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">multi_comment_end</span><span class="p">):</span>
+                    <span class="n">multi_line</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">multi_comment_start</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">multi_line</span> <span class="ow">or</span> <span class="n">multi_string</span><span class="p">:</span>
+                    <span class="n">process_as_code</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">if</span> <span class="n">multi_string</span><span class="p">:</span>
+                        <span class="n">multi_line</span> <span class="o">=</span> <span class="kc">False</span>
+                        <span class="n">multi_string</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">multi_string</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">else</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-30'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-30'>#</a>
+      </div>
+      <p>Get rid of the delimiters so that they aren&rsquo;t in the final
+ docs</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">multi_comment_start</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">multi_comment_end</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                    <span class="n">docs_text</span> <span class="o">+=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                    <span class="n">indent_level</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\s*&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">has_code</span> <span class="ow">and</span> <span class="n">docs_text</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                        <span class="n">save</span><span class="p">(</span><span class="n">docs_text</span><span class="p">,</span> <span class="n">code_text</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="n">code_text</span> <span class="o">=</span> <span class="n">code_text</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">has_code</span> <span class="o">=</span> <span class="n">docs_text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">elif</span> <span class="n">multi_line</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-31'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-31'>#</a>
+      </div>
+      <p>Remove leading spaces</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39; {{</span><span class="si">{:d}</span><span class="s1">}}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">indent_level</span><span class="p">)),</span> <span class="n">line</span><span class="p">):</span>
+                    <span class="n">docs_text</span> <span class="o">+=</span> <span class="n">line</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">indent_level</span><span class="p">):]</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">docs_text</span> <span class="o">+=</span> <span class="n">line</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="k">elif</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">comment_matcher</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">has_code</span><span class="p">:</span>
+                    <span class="n">save</span><span class="p">(</span><span class="n">docs_text</span><span class="p">,</span> <span class="n">code_text</span><span class="p">)</span>
+                    <span class="n">has_code</span> <span class="o">=</span> <span class="n">docs_text</span> <span class="o">=</span> <span class="n">code_text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+                <span class="n">docs_text</span> <span class="o">+=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="n">comment_matcher</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="n">process_as_code</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">process_as_code</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="n">process_as_code</span><span class="p">:</span>
+                <span class="n">has_code</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">code_text</span> <span class="o">+=</span> <span class="n">line</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="n">save</span><span class="p">(</span><span class="n">docs_text</span><span class="p">,</span> <span class="n">code_text</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">sections</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-32'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-32'>#</a>
+      </div>
+      <h3><span id="preprocessing-the-comments" href="preprocessing-the-comments"> Preprocessing the comments </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-33'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-33'>#</a>
+      </div>
+      <p>Add cross-references before having the text processed by markdown.  It&rsquo;s
+possible to reference another file, like this : <code>[[main.py]]</code> which renders
+ <a href="main.html">main.py</a>. You can also reference a specific section of another file,
+like this: <code>[[main.py#highlighting-the-source-code]]</code> which renders as
+ <a href="main.html#highlighting-the-source-code">main.py</a>. Sections have to be manually
+declared; they are written on a single line, and surrounded by equals
+signs:
+<code>=== like this ===</code></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">preprocess</span><span class="p">(</span><span class="n">comment</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="p">:</span><span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">outdir</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Missing the required &#39;outdir&#39; keyword argument.&quot;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-34'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-34'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span> <span class="nf">sanitize_section_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;-&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-35'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-35'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span> <span class="nf">replace_crossref</span><span class="p">(</span><span class="n">match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-36'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-36'>#</a>
+      </div>
+      <p>Check if the match contains an anchor</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">if</span> <span class="s1">&#39;#&#39;</span> <span class="ow">in</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">name</span><span class="p">,</span> <span class="n">anchor</span> <span class="o">=</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;#&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s2">&quot; [</span><span class="si">{}</span><span class="s2">](</span><span class="si">{}</span><span class="s2">#</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                         <span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span>
+                                             <span class="n">destination</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="n">preserve_paths</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">)),</span> <span class="n">anchor</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot; [</span><span class="si">{}</span><span class="s2">](</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+                                      <span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span>
+                                          <span class="n">destination</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="n">preserve_paths</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">)))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-37'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-37'>#</a>
+      </div>
+      <p>Replace equals-sign-formatted section names with anchor links.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">def</span> <span class="nf">replace_section_name</span><span class="p">(</span><span class="n">match</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{lvl}</span><span class="s1"> &lt;span id=&quot;</span><span class="si">{id}</span><span class="s1">&quot; href=&quot;</span><span class="si">{id}</span><span class="s1">&quot;&gt;</span><span class="si">{name}</span><span class="s1">&lt;/span&gt;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">lvl</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">,</span> <span class="s1">&#39;#&#39;</span><span class="p">,</span> <span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span> <span class="nb">id</span><span class="o">=</span><span class="n">sanitize_section_name</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span> <span class="n">name</span><span class="o">=</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+    <span class="n">comment</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^([=]+)([^=]+)[=]*\s*$&#39;</span><span class="p">,</span> <span class="n">replace_section_name</span><span class="p">,</span> <span class="n">comment</span><span class="p">)</span>
+    <span class="n">comment</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(?&lt;!`)\[\[(.+?)\]\]&#39;</span><span class="p">,</span> <span class="n">replace_crossref</span><span class="p">,</span> <span class="n">comment</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">comment</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-38'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-38'>#</a>
+      </div>
+      <h3><span id="highlighting-the-source-code" href="highlighting-the-source-code"> Highlighting the source code </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-39'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-39'>#</a>
+      </div>
+      <p>Highlights a single chunk of code using the <strong>Pygments</strong> module, and runs
+the text of its corresponding comment through <strong>Markdown</strong> or <strong>Asciidoc3</strong>
+(if <code>use_ascii</code> is True).</p>
+<p>We process the entire file in a single call to Pygments by inserting little
+marker comments between each section and then splitting the result string
+wherever our markers occur.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">highlight</span><span class="p">(</span><span class="n">sections</span><span class="p">,</span> <span class="n">language</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">escape_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+              <span class="n">single_file</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">outdir</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Missing the required &#39;outdir&#39; keyword argument.&quot;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-40'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-40'>#</a>
+      </div>
+      <p><em>(If <code>single_file</code> is True, we would just dump the file with markers and not bother with pygments gubbins here)</em></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="ow">not</span> <span class="n">single_file</span><span class="p">:</span>
+        <span class="n">divider_text</span> <span class="o">=</span> <span class="n">language</span><span class="p">[</span><span class="s2">&quot;divider_text&quot;</span><span class="p">]</span>
+        <span class="n">lexer</span> <span class="o">=</span> <span class="n">language</span><span class="p">[</span><span class="s2">&quot;lexer&quot;</span><span class="p">]</span>
+        <span class="n">divider_html</span> <span class="o">=</span> <span class="n">language</span><span class="p">[</span><span class="s2">&quot;divider_html&quot;</span><span class="p">]</span>
+        <span class="n">joined_text</span> <span class="o">=</span> <span class="n">divider_text</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">section</span><span class="p">[</span><span class="s2">&quot;code_text&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span> <span class="k">for</span> <span class="n">section</span> <span class="ow">in</span> <span class="n">sections</span><span class="p">)</span>
+        <span class="n">html_formatter</span> <span class="o">=</span> <span class="n">formatters</span><span class="o">.</span><span class="n">get_formatter_by_name</span><span class="p">(</span><span class="s2">&quot;html&quot;</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">pygments</span><span class="o">.</span><span class="n">highlight</span><span class="p">(</span><span class="n">joined_text</span><span class="p">,</span> <span class="n">lexer</span><span class="p">,</span> <span class="n">html_formatter</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">highlight_start</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+            <span class="n">highlight_end</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">fragments</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">divider_html</span><span class="p">,</span> <span class="n">output</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">section</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sections</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">single_file</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-41'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-41'>#</a>
+      </div>
+      <p><strong>Single_file</strong>: We need to bracket the code section with the appropriate markers.
+ We can just get dycco to do it for us via its <code>preprocess_code()</code>: however, it
+ that expects a list and the language</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">section</span><span class="p">[</span><span class="s1">&#39;code_html&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">preprocess_code</span><span class="p">(</span><span class="nb">list</span><span class="p">([</span><span class="n">section</span><span class="p">[</span><span class="s1">&#39;code_text&#39;</span><span class="p">]]),</span> <span class="n">use_ascii</span><span class="o">=</span><span class="n">use_ascii</span><span class="p">,</span>
+                                                   <span class="n">raw</span><span class="o">=</span><span class="n">single_file</span><span class="p">,</span> <span class="n">language_name</span><span class="o">=</span><span class="n">language</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-42'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-42'>#</a>
+      </div>
+      <p>Otherwise, carry on as before</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="n">section</span><span class="p">[</span><span class="s2">&quot;code_html&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">highlight_start</span> <span class="o">+</span> <span class="n">shift</span><span class="p">(</span><span class="n">fragments</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="n">highlight_end</span>
+        <span class="n">docs_text</span> <span class="o">=</span> <span class="n">section</span><span class="p">[</span><span class="s1">&#39;docs_text&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">escape_html</span><span class="p">:</span>
+            <span class="n">docs_text</span> <span class="o">=</span> <span class="n">html</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">docs_text</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">single_file</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-43'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-43'>#</a>
+      </div>
+      <p>We won&rsquo;t do any formatting if <code>single_file</code> is set&hellip;</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="k">if</span> <span class="n">use_ascii</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-44'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-44'>#</a>
+      </div>
+      <p>&hellip;so process the documentation via asciidoc3 - using dycco, whose <code>preprocess_docs()</code> expects a list</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="n">section</span><span class="p">[</span><span class="s2">&quot;docs_html&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">preprocess_docs</span><span class="p">(</span><span class="nb">list</span><span class="p">([</span><span class="n">docs_text</span><span class="p">]),</span> <span class="n">use_ascii</span><span class="o">=</span><span class="n">use_ascii</span><span class="p">,</span> <span class="n">escape_html</span><span class="o">=</span><span class="n">escape_html</span><span class="p">,</span>
+                                                       <span class="n">raw</span><span class="o">=</span><span class="n">single_file</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-45'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-45'>#</a>
+      </div>
+      <p>Otherwise, just do as we always did&hellip; use Markdown</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="n">section</span><span class="p">[</span><span class="s2">&quot;docs_html&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">markdown</span><span class="p">(</span>
+                    <span class="n">preprocess</span><span class="p">(</span><span class="n">docs_text</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="n">preserve_paths</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">),</span>
+                    <span class="n">extensions</span><span class="o">=</span><span class="p">[</span>
+                        <span class="s1">&#39;markdown.extensions.smarty&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;markdown.extensions.fenced_code&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;markdown.extensions.footnotes&#39;</span><span class="p">,</span>
+                    <span class="p">]</span>
+                <span class="p">)</span>
+        <span class="n">section</span><span class="p">[</span><span class="s2">&quot;num&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+    <span class="k">return</span> <span class="n">sections</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-46'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-46'>#</a>
+      </div>
+      <h3><span id="html-code-generation" href="html-code-generation"> HTML Code generation </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-47'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-47'>#</a>
+      </div>
+      <p>Once all of the code is finished highlighting, we can generate the HTML
+file and write out the documentation. Pass the completed sections into the
+template found in <code>resources/pycco.html</code>.</p>
+<p>Pystache will attempt to recursively render context variables, so we must
+replace any occurences of <code>{{</code>, which is valid in some languages, with a
+&ldquo;unique enough&rdquo; identifier before rendering, and then post-process the
+rendered template and change the identifier back to <code>{{</code>.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">generate_html</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">sections</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">outdir</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Missing the required &#39;outdir&#39; keyword argument&quot;</span><span class="p">)</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="n">dest</span> <span class="o">=</span> <span class="n">destination</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="n">preserve_paths</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">)</span>
+    <span class="n">csspath</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">&quot;pycco.css&quot;</span><span class="p">),</span> <span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">dest</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">sect</span> <span class="ow">in</span> <span class="n">sections</span><span class="p">:</span>
+        <span class="n">sect</span><span class="p">[</span><span class="s2">&quot;code_html&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\{\{&quot;</span><span class="p">,</span> <span class="sa">r</span><span class="s2">&quot;{{&quot;</span><span class="p">,</span> <span class="n">sect</span><span class="p">[</span><span class="s2">&quot;code_html&quot;</span><span class="p">])</span>
+    <span class="n">rendered</span> <span class="o">=</span> <span class="n">pycco_template</span><span class="p">({</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">title</span><span class="p">,</span> <span class="s2">&quot;stylesheet&quot;</span><span class="p">:</span> <span class="n">csspath</span><span class="p">,</span> <span class="s2">&quot;sections&quot;</span><span class="p">:</span> <span class="n">sections</span><span class="p">,</span> <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="n">source</span><span class="p">,</span> <span class="p">})</span>
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;{{&quot;</span><span class="p">,</span> <span class="s2">&quot;{{&quot;</span><span class="p">,</span> <span class="n">rendered</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-48'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-48'>#</a>
+      </div>
+      <h3><span id="helpers-&-setup" href="helpers-&-setup"> Helpers &amp; Setup </span></h3>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-49'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-49'>#</a>
+      </div>
+      <p>Build out the appropriate matchers and delimiters for each language.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">compile_language</span><span class="p">(</span><span class="n">available_language</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="n">language_name</span> <span class="o">=</span> <span class="n">available_language</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+    <span class="n">comment_symbol</span> <span class="o">=</span> <span class="n">available_language</span><span class="p">[</span><span class="s2">&quot;comment_symbol&quot;</span><span class="p">]</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-50'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-50'>#</a>
+      </div>
+      <p>Does the line begin with a comment?</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">available_language</span><span class="p">[</span><span class="s2">&quot;comment_matcher&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^\s*</span><span class="si">{}</span><span class="s2">\s?&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">comment_symbol</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-51'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-51'>#</a>
+      </div>
+      <p>The dividing token we feed into Pygments, to delimit the boundaries between
+ sections.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">available_language</span><span class="p">[</span><span class="s2">&quot;divider_text&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="si">{}</span><span class="s2">DIVIDER</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">comment_symbol</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-52'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-52'>#</a>
+      </div>
+      <p>The mirror of <code>divider_text</code> that we expect Pygments to return. We can split
+ on this to recover the original sections.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">available_language</span><span class="p">[</span><span class="s2">&quot;divider_html&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+        <span class="sa">r</span><span class="s1">&#39;\n*&lt;span class=&quot;c[1]?&quot;&gt;</span><span class="si">{}</span><span class="s1">DIVIDER&lt;/span&gt;\n*&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">comment_symbol</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-53'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-53'>#</a>
+      </div>
+      <p>Get the Pygments Lexer for this language.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">available_language</span><span class="p">[</span><span class="s2">&quot;lexer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lexers</span><span class="o">.</span><span class="n">get_lexer_by_name</span><span class="p">(</span><span class="n">language_name</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">supported_languages</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+    <span class="n">compile_language</span><span class="p">(</span><span class="n">entry</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-54'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-54'>#</a>
+      </div>
+      <p>Get the current language we&rsquo;re documenting, based on the extension.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">get_language</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">code</span><span class="p">,</span> <span class="n">language_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">language_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">language</span> <span class="ow">in</span> <span class="n">supported_languages</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">language</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">language_name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">language</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown forced language: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">language_name</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">source</span><span class="p">:</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;.*(\..+)&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">source</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">m</span> <span class="ow">and</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="ow">in</span> <span class="n">supported_languages</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">supported_languages</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)]</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">language_name</span> <span class="o">=</span> <span class="n">lexers</span><span class="o">.</span><span class="n">guess_lexer</span><span class="p">(</span><span class="n">code</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">language</span> <span class="ow">in</span> <span class="n">supported_languages</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">language</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">language_name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">language</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-55'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-55'>#</a>
+      </div>
+      <p>If pygments can&rsquo;t find any lexers, it will raise its own subclass of ValueError. We will catch it and raise
+ ours for consistency.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Can&#39;t figure out the language! </span><span class="si">{0}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">language_name</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-56'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-56'>#</a>
+      </div>
+      <p>Compute the destination HTML path for an input source file path. If the
+source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.html</code>.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">destination</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">replace_dots</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">extension</span><span class="o">=</span><span class="s1">&#39;html&#39;</span><span class="p">):</span>
+    <span class="n">dirname</span><span class="p">,</span> <span class="n">filename</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">outdir</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Missing the required &#39;outdir&#39; keyword argument.&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;\.[^.]*$&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">filename</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-57'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-57'>#</a>
+      </div>
+      <p>Now we want to, if required, replace dots in the file-name with
+ underscores in case we have, say, <code>xyz.py</code> and <code>xyz.css</code> where the
+ last file written would be <code>xyz.html</code>. Instead, produce
+ <code>xyz_py.html</code> and <code>xyz_css.html</code></p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="n">replace_dots</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-58'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-58'>#</a>
+      </div>
+      <p>Get the old file extension and put it back on and then replace the dots</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="n">name</span> <span class="o">=</span> <span class="n">name</span> <span class="o">+</span> <span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">filepath</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">preserve_paths</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">dest</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="sa">u</span><span class="s2">&quot;</span><span class="si">{0}</span><span class="s2">.</span><span class="si">{1}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">extension</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-59'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-59'>#</a>
+      </div>
+      <p>If <code>join()</code> is passed an absolute path, it will ignore any earlier path
+ elements. We will force <code>outdir</code> to the beginning of the path to avoid
+ writing outside our destination.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="ow">not</span> <span class="n">dest</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">outdir</span><span class="p">):</span>
+        <span class="n">dest</span> <span class="o">=</span> <span class="n">outdir</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="n">dest</span>
+    <span class="k">return</span> <span class="n">dest</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-60'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-60'>#</a>
+      </div>
+      <p>Shift items off the front of the <code>list</code> until it is empty, then return <code>default</code>.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">shift</span><span class="p">(</span><span class="n">a_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">default</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">a_list</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">default</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-61'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-61'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">remove_control_chars</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-62'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-62'>#</a>
+      </div>
+      <p>The unicode category for control characters starts with &lsquo;C&rsquo;</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">return</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">s</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">category</span><span class="p">(</span><span class="n">c</span><span class="p">)</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;C&#39;</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-63'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-63'>#</a>
+      </div>
+      <p>Sanitize directory string and ensure that the destination directory exists.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">ensure_directory</span><span class="p">(</span><span class="n">directory</span><span class="p">):</span>
+    <span class="n">directory</span> <span class="o">=</span> <span class="n">remove_control_chars</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">directory</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">directory</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-64'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-64'>#</a>
+      </div>
+      <p>The start of each Pygments highlight block.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="n">highlight_start</span> <span class="o">=</span> <span class="s2">&quot;&lt;div class=</span><span class="se">\&quot;</span><span class="s2">highlight</span><span class="se">\&quot;</span><span class="s2">&gt;&lt;pre&gt;&quot;</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-65'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-65'>#</a>
+      </div>
+      <p>The end of each Pygments highlight block.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="n">highlight_end</span> <span class="o">=</span> <span class="s2">&quot;&lt;/pre&gt;&lt;/div&gt;&quot;</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-66'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-66'>#</a>
+      </div>
+      <p>This function will iterate through the list of sources and if a directory
+is encountered it will walk the tree for any files.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">_flatten_sources</span><span class="p">(</span><span class="n">sources</span><span class="p">):</span>
+    <span class="n">_sources</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">dirpath</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">filenames</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">source</span><span class="p">):</span>
+                <span class="n">_sources</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirpath</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_sources</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_sources</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-67'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-67'>#</a>
+      </div>
+      <p>For each source file passed as argument, generate the documentation.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">language</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf8&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">skip</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">underlines</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">use_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">escape_html</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">single_file</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">outdir</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Missing the required &#39;directory&#39; keyword argument.&quot;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-68'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-68'>#</a>
+      </div>
+      <p>We have a default extension of <code>html</code>&hellip;</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">extension</span> <span class="o">=</span> <span class="s1">&#39;html&#39;</span>
+    <span class="k">if</span> <span class="n">single_file</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-69'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-69'>#</a>
+      </div>
+      <p>&hellip;but if we are wanting a single file, use Markdown&rsquo;s or
+ Asciidoc3&rsquo;s extensions</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="n">extension</span> <span class="o">=</span> <span class="s1">&#39;adoc&#39;</span> <span class="k">if</span> <span class="n">use_ascii</span> <span class="k">else</span> <span class="s1">&#39;md&#39;</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-70'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-70'>#</a>
+      </div>
+      <p>Make a copy of sources given on the command line. <code>main()</code> needs the
+ original list when monitoring for changed files.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">sources</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">_flatten_sources</span><span class="p">(</span><span class="n">sources</span><span class="p">))</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-71'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-71'>#</a>
+      </div>
+      <p>Proceed to generating the documentation.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="n">sources</span><span class="p">:</span>
+        <span class="n">outdir</span> <span class="o">=</span> <span class="n">ensure_directory</span><span class="p">(</span><span class="n">outdir</span><span class="p">)</span>
+        <span class="n">css</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">&quot;pycco.css&quot;</span><span class="p">),</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span>
+        <span class="n">css</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">pycco_css</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">encoding</span><span class="p">))</span>
+        <span class="n">css</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">generated_files</span> <span class="o">=</span> <span class="p">[]</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-72'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-72'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">def</span> <span class="nf">next_file</span><span class="p">():</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">sources</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">dest</span> <span class="o">=</span> <span class="n">destination</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="n">preserve_paths</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">,</span> <span class="n">replace_dots</span><span class="o">=</span><span class="n">underlines</span><span class="p">,</span>
+                               <span class="n">extension</span><span class="o">=</span><span class="n">extension</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">suppress</span><span class="p">(</span><span class="ne">OSError</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">dest</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dest</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f_destination</span><span class="p">:</span>
+                    <span class="n">f_destination</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">generate_documentation</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="n">preserve_paths</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">,</span>
+                                                               <span class="n">language</span><span class="o">=</span><span class="n">language</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="n">encoding</span><span class="p">,</span>
+                                                               <span class="n">use_ascii</span><span class="o">=</span><span class="n">use_ascii</span><span class="p">,</span>
+                                                               <span class="n">escape_html</span><span class="o">=</span><span class="n">escape_html</span><span class="p">,</span> <span class="n">single_file</span><span class="o">=</span><span class="n">single_file</span><span class="p">))</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;pycco: </span><span class="si">{}</span><span class="s2"> -&gt; </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">dest</span><span class="p">))</span>
+                <span class="n">generated_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dest</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-73'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-73'>#</a>
+      </div>
+      <p>Dycco uses Pythons AST so sometimes returns Syntax error for bad python code</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">UnicodeDecodeError</span><span class="p">,</span> <span class="ne">SyntaxError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">skip</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;pycco [FAILURE]: </span><span class="si">{}</span><span class="s2">, </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span>
+            <span class="k">if</span> <span class="n">sources</span><span class="p">:</span>
+                <span class="n">next_file</span><span class="p">()</span>
+        <span class="n">next_file</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">index</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="s2">&quot;index.html&quot;</span><span class="p">),</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">generate_index</span><span class="p">(</span><span class="n">generated_files</span><span class="p">,</span> <span class="n">outdir</span><span class="p">))</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;process&quot;</span><span class="p">,</span> <span class="s2">&quot;generate_documentation&quot;</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-74'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-74'>#</a>
+      </div>
+      <p>Monitor each source file and re-generate documentation on change.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">monitor</span><span class="p">(</span><span class="n">sources</span><span class="p">,</span> <span class="n">opts</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-75'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-75'>#</a>
+      </div>
+      <p>The watchdog modules are imported in <code>main()</code> but we need to re-import
+ here to bring them into the local namespace.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="kn">import</span> <span class="nn">watchdog.events</span>
+    <span class="kn">import</span> <span class="nn">watchdog.observers</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-76'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-76'>#</a>
+      </div>
+      <p>Watchdog operates on absolute paths, so map those to original paths
+ as specified on the command line.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">absolute_sources</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">source</span><span class="p">),</span> <span class="n">source</span><span class="p">)</span>
+                            <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-77'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-77'>#</a>
+      </div>
+      <p>A handler for recompiling files which triggered watchdog events.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">class</span> <span class="nc">RegenerateHandler</span><span class="p">(</span><span class="n">watchdog</span><span class="o">.</span><span class="n">events</span><span class="o">.</span><span class="n">FileSystemEventHandler</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-78'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-78'>#</a>
+      </div>
+      <p>Regenerate documentation for a file which triggered an event.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">def</span> <span class="nf">on_modified</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-79'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-79'>#</a>
+      </div>
+      <p>Re-generate documentation from a source file if it was listed on
+ the command line. Watchdog monitors whole directories, so other
+ files may cause notifications as well.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">src_path</span> <span class="ow">in</span> <span class="n">absolute_sources</span><span class="p">:</span>
+                <span class="n">process</span><span class="p">([</span><span class="n">absolute_sources</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">src_path</span><span class="p">]],</span>
+                        <span class="n">outdir</span><span class="o">=</span><span class="n">opts</span><span class="o">.</span><span class="n">outdir</span><span class="p">,</span>
+                        <span class="n">preserve_paths</span><span class="o">=</span><span class="n">opts</span><span class="o">.</span><span class="n">paths</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-80'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-80'>#</a>
+      </div>
+      <p>Set up an observer which monitors all directories for files given on
+ the command line and notifies the handler defined above.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">event_handler</span> <span class="o">=</span> <span class="n">RegenerateHandler</span><span class="p">()</span>
+    <span class="n">observer</span> <span class="o">=</span> <span class="n">watchdog</span><span class="o">.</span><span class="n">observers</span><span class="o">.</span><span class="n">Observer</span><span class="p">()</span>
+    <span class="n">directories</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">source</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">directory</span> <span class="ow">in</span> <span class="n">directories</span><span class="p">:</span>
+        <span class="n">observer</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span><span class="n">event_handler</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">directory</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-81'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-81'>#</a>
+      </div>
+      <p>Run the file change monitoring loop until the user hits Ctrl-C.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="n">observer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="n">observer</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="n">observer</span><span class="o">.</span><span class="n">join</span><span class="p">()</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-82'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-82'>#</a>
+      </div>
+      <p>Hook spot for the console script.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="s1">&#39;--paths&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Preserve path structure of original files&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-d&#39;</span><span class="p">,</span> <span class="s1">&#39;--directory&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;outdir&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;docs&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;The output directory that the rendered files should go to.&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-w&#39;</span><span class="p">,</span> <span class="s1">&#39;--watch&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Watch original files and re-generate documentation on changes&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-l&#39;</span><span class="p">,</span> <span class="s1">&#39;--force-language&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+                        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;language&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Force the language for the given files&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-i&#39;</span><span class="p">,</span> <span class="s1">&#39;--generate_index&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Generate an index.html document with sitemap content&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-s&#39;</span><span class="p">,</span> <span class="s1">&#39;--skip-bad-files&#39;</span><span class="p">,</span> <span class="s1">&#39;-e&#39;</span><span class="p">,</span> <span class="s1">&#39;--ignore-errors&#39;</span><span class="p">,</span>
+                        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;skip_bad_files&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Continue processing after hitting a bad file&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-a&#39;</span><span class="p">,</span> <span class="s1">&#39;--asciidoc3&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;use_ascii&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Process with asciidoc3 instead of markdown (you will have to install asciidoc3, of course)&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--escape-html&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;escape_html&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Run the documentation through html.escape() before markdown or asciidoc3&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-f&#39;</span><span class="p">,</span> <span class="s1">&#39;--single-file&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;single_file&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Just produce a .md or .adoc file in single-column to be processed externally&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-u&#39;</span><span class="p">,</span> <span class="s1">&#39;--underlines&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Replace dots in file extension with underscores before adding the html extension (e.g. x.txt becomes x_txt.html)&#39;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;sources&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;*&#39;</span><span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">outdir</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+        <span class="n">outdir</span> <span class="o">=</span> <span class="s1">&#39;.&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">outdir</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">outdir</span>
+    <span class="n">process</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">sources</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="n">outdir</span><span class="p">,</span> <span class="n">preserve_paths</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">paths</span><span class="p">,</span>
+            <span class="n">language</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">language</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">generate_index</span><span class="p">,</span>
+            <span class="n">skip</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">skip_bad_files</span><span class="p">,</span> <span class="n">underlines</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">underlines</span><span class="p">,</span>
+            <span class="n">use_ascii</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">use_ascii</span><span class="p">,</span> <span class="n">escape_html</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">escape_html</span><span class="p">,</span>
+            <span class="n">single_file</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">single_file</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-83'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-83'>#</a>
+      </div>
+      <p>If the -w / --watch option was present, monitor the source directories
+ for changes and re-generate documentation for source files whenever they
+ are modified.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">watch</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">watchdog.events</span>
+            <span class="kn">import</span> <span class="nn">watchdog.observers</span>  <span class="c1"># noqa</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s1">&#39;The -w/--watch option requires the watchdog package.&#39;</span><span class="p">)</span>
+        <span class="n">monitor</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">sources</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-84'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-84'>#</a>
+      </div>
+      <p>Run the script.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+
+</pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>

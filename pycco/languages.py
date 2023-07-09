@@ -35,15 +35,12 @@ DASH_DASH = "--"
 TRIPLE_QUOTE = '"""'
 
 
-def lang(name, comment_symbol, multistart=None, multiend=None):
+def lang(name, comment_symbol, multistart=None, multiend=None) -> dict:
     """
     Generate a language entry dictionary, given a name and comment symbol and
     optional start/end strings for multiline comments.
     """
-    result = {
-        "name": name,
-        "comment_symbol": comment_symbol
-    }
+    result = {"name": name, "comment_symbol": comment_symbol}
     if multistart is not None and multiend is not None:
         result.update(multistart=multistart, multiend=multiend)
     return result
@@ -66,7 +63,7 @@ supported_languages = {
 
     ".cl": c_lang,
 
-    ".css": lang("css", SLASH_SLASH, SLASH_STAR, STAR_SLASH), # Note, strictly, css has no single-line comment type
+    ".css": lang("css", SLASH_SLASH, SLASH_STAR, STAR_SLASH),  # Note, strictly, css has no single-line comment type
 
     ".cpp": lang("cpp", SLASH_SLASH, SLASH_STAR, STAR_SLASH),  # This was incorrect, it should include SLASH_STAR, STAR_SLASH
 

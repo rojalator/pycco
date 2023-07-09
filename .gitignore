@@ -3,7 +3,6 @@
 /Pycco.egg-info
 build/*
 dist/*
-docs/*
 /tags
 env/
 .cache

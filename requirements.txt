@@ -1,4 +1,4 @@
-pystache==0.5.4
+pystache>=0.5.4
 Pygments>=2.7.4
-markdown==2.6.11
+markdown>=2.6.11
 dycco>=1.0.2

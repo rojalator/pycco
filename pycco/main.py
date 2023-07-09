@@ -58,7 +58,7 @@ or
 for this pycco version).
 """
 
-from __future__ import absolute_import, print_function
+# from __future__ import absolute_import, print_function
 
 # Import our external dependencies.
 import argparse
@@ -67,7 +67,10 @@ import re
 import sys
 import time
 import html
+from contextlib import suppress
 from os import path
+from typing import Any
+import unicodedata
 
 import pygments
 from pygments import formatters, lexers
@@ -92,7 +95,8 @@ ascii_module = importlib.util.find_spec('asciidoc3')
 if ascii_module:
     # We found a version of asciidoc3, so record where it is for later use by `preprocess_docs()`
     ascii_location = ascii_module.submodule_search_locations[0] + '/asciidoc3.py'
-    import asciidoc3.asciidoc3api as AsciiDoc3API
+    import asciidoc3.asciidoc3api as AsciiDoc3API  # noqa
+
 
 # === Main Documentation Generation Functions ===
 
@@ -113,7 +117,8 @@ def generate_documentation(source, outdir=None, preserve_paths=True,
                                    escape_html=escape_html, single_file=single_file)
 
 
-def _generate_documentation(file_path, code, outdir, preserve_paths, language, use_ascii, escape_html, single_file) -> bytes:
+def _generate_documentation(file_path, code, outdir, preserve_paths, language, use_ascii, escape_html,
+                            single_file) -> bytes:
     """
     Helper function to allow documentation generation without file handling.
     """
@@ -133,7 +138,7 @@ def _generate_documentation(file_path, code, outdir, preserve_paths, language, u
         return generate_html(file_path, sections, preserve_paths=preserve_paths, outdir=outdir)
 
 
-def _parse_python(code):
+def _parse_python(code: str) -> dict:
     """
     We deal with the special case of python which, ironically, Pycco is rather bad at
     as it thinks that triple-strings can only be docstrings, when they can occur anywhere.
@@ -144,10 +149,13 @@ def _parse_python(code):
     dycco_sections = dycco_parse(code)
     return dycco_sections
 
+
 # ==== PARSE ====
 
 
-def parse(code, language):
+#
+
+def parse(source_code: str, source_language: dict):
     """
     Given a string of source code, parse out each comment and the code that
     follows it, and create an individual **section** for it.
@@ -159,23 +167,46 @@ def parse(code, language):
           "code_html": ...,
           "num":       ...
         }
+
+    We process the source-code using the following method - the diagram shows our thinking:
+
+    [<img src="./jsp.jpg" width="100%"/>](./jsp.jpg "Processing overview (click to enlarge)")
+
+    We have (logically) 3 parts of the file: the first line-group, the middle line-group
+    and the last line.
+
+    Each line can be:--
+
+    1. multi_comment_start (e.g. `/*` or `/* SOME TEXT`)
+    2. multi_comment_end   (e.g. `*/` or `SOME TEXT */`)
+    3. multi_comment_start_end (e.g. `/* SOME TEXT */`)
+    4. single_comment_mark (e.g. `//`)
+    5. code
+    6. a comment line in a multi_comment
+    7. a code line with a trailing multi_comment_start_end:
+
+            x = 5; /* a comment */
+
+    We can simplify things my turning `multi_comment_start_end` lines into
+    `single_comment_mark` lines.
+
     """
-    lines = code.split("\n")
+    lines: list[str] = source_code.split("\n")
     sections = []
     has_code = docs_text = code_text = ""
     # *For Python, we just call dycco's routines via our `_parse_python()`*
     # It has to be valid code or we'll get SyntaxError from the AST handler
-    if language["name"] == "python":
-        dycco_sections = _parse_python(code)
+    if source_language["name"] == "python":
+        dycco_sections = _parse_python(source_code)
     elif lines[0].startswith("#!"):
         # Skip over lines like "#!/usr/bin/env python3"
         lines.pop(0)
 
-    def save(docs:str, code:str):
+    def save(docs: str, code: str):
         if docs or code:
             sections.append({"docs_text": docs, "code_text": code})
 
-    if language["name"] == "python":
+    if source_language["name"] == "python":
         # If we used dycco for Python then we need to turn dycco's sections [that we got via `_parse_python()`]
         # into our own by concatenating into strings and then `save()`-ing them
         for key, value in sorted(dycco_sections.items()):
@@ -189,25 +220,84 @@ def parse(code, language):
         # For not-Python, setup the variables to get ready to check for multiline comments
         multi_line = False
         multi_string = False
-        multistart, multiend = language.get("multistart"), language.get("multiend")
-        comment_matcher = language['comment_matcher']
+        multi_comment_start, multi_comment_end = source_language.get("multistart"), source_language.get("multiend")
+        comment_matcher = source_language['comment_matcher']
+        single_line_comment_symbol = source_language['comment_symbol']
+        in_multi_comment = False
+        process_as_code = False
 
-        for line in lines:
-            process_as_code = False
+        converted_lines = []
+        for i, line in enumerate(lines):
+            # Note that the `continue` saves a lot of `if...else` heartache
+            # What about // some text // some more text
+            # or /* comment */ // comment
+            # or /* comment */  /* another comment */
+            # or /* comment */ x = 5; /* another comment */
+            # or // summat /* comment */
+            stripped_line = line.strip()
+
+            if stripped_line.startswith(multi_comment_start) and stripped_line.endswith(multi_comment_end):
+                # Case 3: multi-line on a single line:
+                # it's really single line, so turn it into one
+                stripped_line = stripped_line.removesuffix(multi_comment_end)
+                stripped_line = ' '.join([single_line_comment_symbol, stripped_line.removeprefix(multi_comment_start)])
+                converted_lines.append(stripped_line)
+                continue
+
+            # Convert multi-comments when we find them: we check in_multi_comment
+            # so that we can deal with coffee-script's ### and ###
+            if stripped_line.startswith(multi_comment_start) and not in_multi_comment:
+                # Case 1: just starts with a multi-line marker
+                stripped_line = ' '.join([single_line_comment_symbol, stripped_line.removeprefix(multi_comment_start)])
+                converted_lines.append(stripped_line)
+                in_multi_comment = True
+                continue
+
+            if in_multi_comment and not stripped_line.endswith(multi_comment_end):
+                # Case 6: We're in a multi-comment so just add it
+                # DON'T ADD THE STRIPPED LINE
+                # converted_lines.append(single_line_comment_symbol + line)
+                converted_lines.append(' '.join([single_line_comment_symbol, stripped_line]))
+                continue
+
+            if in_multi_comment and stripped_line.endswith(multi_comment_end):
+                # Case 2: Don't strip the leading spaces
+                # stripped_line = line.rstrip().removesuffix(multi_comment_end)
+                stripped_line = stripped_line.removesuffix(multi_comment_end)
+                converted_lines.append(' '.join([single_line_comment_symbol, stripped_line]))
+                in_multi_comment = False
+                continue
+
+            # TODO: not sure about the following: it converts trailing /*...*/ into //
+            # TODO: BUT // is not moved into the comment area whereas the old code WOULD
+            # TODO: move /*...*/ into it
+            # if stripped_line.endswith(multi_comment_end) and multi_comment_start in stripped_line:
+            #     # Case 7
+            #     # break it into the code and the comment, removing markers
+            #     snipped:list = line.removesuffix(multi_comment_end).split(multi_comment_start)
+            #     # Then join it together using the single line comment marker
+            #     converted_lines.append(single_line_comment_symbol.join(snipped))
+            #     continue
+
+            # Case 5: If we reach here, we've just got plain old code, at last
+            converted_lines.append(line)
+
+        # for i, line in enumerate(converted_lines):
+        #     print(i, line)
+        # assert False
+        # in_multi_comment = False
+        for i, line in enumerate(converted_lines):
             # Only go into multiline comments section when one of the delimiters is
             # found to be at the start of a line
-            if multistart and multiend \
+            if multi_comment_start and multi_comment_end \
                 and any(line.lstrip().startswith(delim) or line.rstrip().endswith(delim)
-                        for delim in (multistart, multiend)):
+                        for delim in (multi_comment_start, multi_comment_end)):
                 multi_line = not multi_line
 
-                if multi_line \
-                    and line.strip().endswith(multiend) \
-                    and len(line.strip()) > len(multiend):
+                if multi_line and line.strip().endswith(multi_comment_end) and len(line.strip()) > len(multi_comment_end):
                     multi_line = False
 
-                if not line.strip().startswith(multistart) and not multi_line \
-                    or multi_string:
+                if not line.strip().startswith(multi_comment_start) and not multi_line or multi_string:
 
                     process_as_code = True
 
@@ -220,8 +310,8 @@ def parse(code, language):
                 else:
                     # Get rid of the delimiters so that they aren't in the final
                     # docs
-                    line = line.replace(multistart, '')
-                    line = line.replace(multiend, '')
+                    line = line.replace(multi_comment_start, '')
+                    line = line.replace(multi_comment_end, '')
                     docs_text += line.strip() + '\n'
                     indent_level = re.match(r"\s*", line).group(0)
 
@@ -242,27 +332,22 @@ def parse(code, language):
                     save(docs_text, code_text)
                     has_code = docs_text = code_text = ''
                 docs_text += re.sub(comment_matcher, "", line) + "\n"
-
+                process_as_code = False
             else:
                 process_as_code = True
 
             if process_as_code:
-                if code_text and any(line.lstrip().startswith(x)
-                                     for x in ['class ', 'def ', '@']):
-                    if not code_text.lstrip().startswith("@"):
-                        save(docs_text, code_text)
-                        code_text = has_code = docs_text = ''
-
                 has_code = True
                 code_text += line + '\n'
 
         save(docs_text, code_text)
     return sections
 
+
 # === Preprocessing the comments ===
 
 
-def preprocess(comment, preserve_paths=True, outdir=None):
+def preprocess(comment, preserve_paths:bool = True, outdir=None):
     """
     Add cross-references before having the text processed by markdown.  It's
     possible to reference another file, like this : `[[main.py]]` which renders
@@ -277,44 +362,39 @@ def preprocess(comment, preserve_paths=True, outdir=None):
     if not outdir:
         raise TypeError("Missing the required 'outdir' keyword argument.")
 
-    def sanitize_section_name(name):
+    def sanitize_section_name(name) -> str:
         return "-".join(name.lower().strip().split(" "))
 
-    def replace_crossref(match):
+    def replace_crossref(match) -> str:
         # Check if the match contains an anchor
         if '#' in match.group(1):
             name, anchor = match.group(1).split('#')
             return " [{}]({}#{})".format(name,
-                                         path.basename(destination(name,
-                                                                   preserve_paths=preserve_paths,
-                                                                   outdir=outdir)),
-                                         anchor)
-
+                                         path.basename(
+                                             destination(name, preserve_paths=preserve_paths, outdir=outdir)), anchor)
         else:
             return " [{}]({})".format(match.group(1),
-                                      path.basename(destination(match.group(1),
-                                                                preserve_paths=preserve_paths,
-                                                                outdir=outdir)))
+                                      path.basename(
+                                          destination(match.group(1), preserve_paths=preserve_paths, outdir=outdir)))
 
-    def replace_section_name(match):
+    def replace_section_name(match) -> str:
         """
         Replace equals-sign-formatted section names with anchor links.
         """
         return '{lvl} <span id="{id}" href="{id}">{name}</span>'.format(
-            lvl=re.sub('=', '#', match.group(1)),
-            id=sanitize_section_name(match.group(2)),
-            name=match.group(2)
-        )
+            lvl=re.sub('=', '#', match.group(1)), id=sanitize_section_name(match.group(2)), name=match.group(2))
 
     comment = re.sub(r'^([=]+)([^=]+)[=]*\s*$', replace_section_name, comment)
     comment = re.sub(r'(?<!`)\[\[(.+?)\]\]', replace_crossref, comment)
 
     return comment
 
+
 # === Highlighting the source code ===
 
 
-def highlight(sections, language, preserve_paths=True, outdir=None, use_ascii=False, escape_html=False, single_file=False):
+def highlight(sections, language, preserve_paths=True, outdir=None, use_ascii=False, escape_html=False,
+              single_file=False):
     """
     Highlights a single chunk of code using the **Pygments** module, and runs
     the text of its corresponding comment through **Markdown** or **Asciidoc3**
@@ -333,18 +413,11 @@ def highlight(sections, language, preserve_paths=True, outdir=None, use_ascii=Fa
         lexer = language["lexer"]
         divider_html = language["divider_html"]
 
-        joined_text = divider_text.join(
-            section["code_text"].rstrip() for section in sections
-        )
+        joined_text = divider_text.join(section["code_text"].rstrip() for section in sections)
         html_formatter = formatters.get_formatter_by_name("html")
 
-        output = pygments.highlight(
-            joined_text, lexer, html_formatter
-        ).replace(
-            highlight_start, ""
-        ).replace(
-            highlight_end, ""
-        )
+        output = pygments.highlight(joined_text, lexer, html_formatter).replace(highlight_start, "").replace(
+            highlight_end, "")
         fragments = re.split(divider_html, output)
 
     for i, section in enumerate(sections):
@@ -357,29 +430,19 @@ def highlight(sections, language, preserve_paths=True, outdir=None, use_ascii=Fa
         else:
             # Otherwise, carry on as before
             section["code_html"] = highlight_start + shift(fragments, "") + highlight_end
-        # For Python 3, where `unicode()` does not exist, we'll get `NameError`
-        # at which point we just assign it
-        try:
-            docs_text = unicode(section["docs_text"])
-        except UnicodeError:
-            docs_text = unicode(section["docs_text"].decode('utf-8'))
-        except NameError:
-            docs_text = section['docs_text']
+        docs_text = section['docs_text']
         if escape_html:
             docs_text = html.escape(docs_text)
         if not single_file:
             # We won't do any formatting if `single_file` is set...
             if use_ascii:
                 # ...so process the documentation via asciidoc3 - using dycco, whose `preprocess_docs()` expects a list
-                section["docs_html"] = preprocess_docs(list([docs_text]), use_ascii=use_ascii, escape_html=escape_html, raw=single_file)
+                section["docs_html"] = preprocess_docs(list([docs_text]), use_ascii=use_ascii, escape_html=escape_html,
+                                                       raw=single_file)
             else:
                 # Otherwise, just do as we always did... use Markdown
                 section["docs_html"] = markdown(
-                    preprocess(
-                        docs_text,
-                        preserve_paths=preserve_paths,
-                        outdir=outdir
-                    ),
+                    preprocess(docs_text, preserve_paths=preserve_paths, outdir=outdir),
                     extensions=[
                         'markdown.extensions.smarty',
                         'markdown.extensions.fenced_code',
@@ -389,6 +452,7 @@ def highlight(sections, language, preserve_paths=True, outdir=None, use_ascii=Fa
         section["num"] = i
 
     return sections
+
 
 # === HTML Code generation ===
 
@@ -414,19 +478,14 @@ def generate_html(source, sections, preserve_paths=True, outdir=None):
     for sect in sections:
         sect["code_html"] = re.sub(r"\{\{", r"__DOUBLE_OPEN_STACHE__", sect["code_html"])
 
-    rendered = pycco_template({
-        "title": title,
-        "stylesheet": csspath,
-        "sections": sections,
-        "source": source,
-    })
+    rendered = pycco_template({"title": title, "stylesheet": csspath, "sections": sections, "source": source, })
 
     return re.sub(r"__DOUBLE_OPEN_STACHE__", "{{", rendered).encode("utf-8")
 
 
 # === Helpers & Setup ===
 
-def compile_language(available_language:dict):
+def compile_language(available_language: dict):
     """
     Build out the appropriate matchers and delimiters for each language.
     """
@@ -442,7 +501,8 @@ def compile_language(available_language:dict):
 
     # The mirror of `divider_text` that we expect Pygments to return. We can split
     # on this to recover the original sections.
-    available_language["divider_html"] = re.compile(r'\n*<span class="c[1]?">{}DIVIDER</span>\n*'.format(comment_symbol))
+    available_language["divider_html"] = re.compile(
+        r'\n*<span class="c[1]?">{}DIVIDER</span>\n*'.format(comment_symbol))
 
     # Get the Pygments Lexer for this language.
     available_language["lexer"] = lexers.get_lexer_by_name(language_name)
@@ -457,9 +517,9 @@ def get_language(source, code, language_name=None):
     Get the current language we're documenting, based on the extension.
     """
     if language_name is not None:
-        for entry in supported_languages.values():
-            if entry["name"] == language_name:
-                return entry
+        for language in supported_languages.values():
+            if language["name"] == language_name:
+                return language
         else:
             raise ValueError("Unknown forced language: {}".format(language_name))
 
@@ -470,15 +530,14 @@ def get_language(source, code, language_name=None):
 
     try:
         language_name = lexers.guess_lexer(code).name.lower()
-        for entry in supported_languages.values():
-            if entry["name"] == language_name:
-                return entry
+        for language in supported_languages.values():
+            if language["name"] == language_name:
+                return language
         else:
             raise ValueError()
     except ValueError:
-        # If pygments can't find any lexers, it will raise its own
-        # subclass of ValueError. We will catch it and raise ours
-        # for consistency.
+        # If pygments can't find any lexers, it will raise its own subclass of ValueError. We will catch it and raise
+        # ours for consistency.
         raise ValueError("Can't figure out the language! {0}".format(language_name))
 
 
@@ -487,7 +546,6 @@ def destination(filepath, preserve_paths=True, outdir=None, replace_dots=False, 
     Compute the destination HTML path for an input source file path. If the
     source is `lib/example.py`, the HTML will be at `docs/example.html`.
     """
-
     dirname, filename = path.split(filepath)
     if not outdir:
         raise TypeError("Missing the required 'outdir' keyword argument.")
@@ -514,25 +572,19 @@ def destination(filepath, preserve_paths=True, outdir=None, replace_dots=False, 
     return dest
 
 
-def shift(list, default):
+def shift(a_list: list, default: Any):
     """
-    Shift items off the front of the `list` until it is empty, then return
-    `default`.
+    Shift items off the front of the `list` until it is empty, then return `default`.
     """
     try:
-        return list.pop(0)
+        return a_list.pop(0)
     except IndexError:
         return default
 
 
-def remove_control_chars(s):
-    # Sanitization regexp copied from
-    # http://stackoverflow.com/questions/92438/stripping-non-printable-characters-from-a-string-in-python
-    from pycco.compat import pycco_unichr
-    control_chars = ''.join(
-        map(pycco_unichr, list(range(0, 32)) + list(range(127, 160))))
-    control_char_re = re.compile(u'[{}]'.format(re.escape(control_chars)))
-    return control_char_re.sub('', s)
+def remove_control_chars(s: str) -> str:
+    # The unicode category for control characters starts with 'C'
+    return ''.join(c for c in s if not unicodedata.category(c).startswith('C'))
 
 
 def ensure_directory(directory):
@@ -542,7 +594,6 @@ def ensure_directory(directory):
     directory = remove_control_chars(directory)
     if not os.path.isdir(directory):
         os.makedirs(directory)
-
     return directory
 
 
@@ -576,21 +627,17 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
     """
     For each source file passed as argument, generate the documentation.
     """
-
     if not outdir:
         raise TypeError("Missing the required 'directory' keyword argument.")
-
     # We have a default extension of `html`...
     extension = 'html'
     if single_file:
         # ...but if we are wanting a single file, use Markdown's or
         # Asciidoc3's extensions
         extension = 'adoc' if use_ascii else 'md'
-
     # Make a copy of sources given on the command line. `main()` needs the
     # original list when monitoring for changed files.
     sources = sorted(_flatten_sources(sources))
-
     # Proceed to generating the documentation.
     if sources:
         outdir = ensure_directory(outdir)
@@ -602,18 +649,18 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
 
         def next_file():
             s = sources.pop(0)
-            dest = destination(s, preserve_paths=preserve_paths, outdir=outdir, replace_dots=underlines, extension=extension)
+            dest = destination(s, preserve_paths=preserve_paths, outdir=outdir, replace_dots=underlines,
+                               extension=extension)
 
-            try:
+            with suppress(OSError):
                 os.makedirs(path.split(dest)[0])
-            except OSError:
-                pass
 
             try:
-                with open(dest, "wb") as f:
-                    f.write(generate_documentation(s, preserve_paths=preserve_paths, outdir=outdir,
-                                                   language=language, encoding=encoding, use_ascii=use_ascii,
-                                                   escape_html=escape_html, single_file=single_file))
+                with open(dest, "wb") as f_destination:
+                    f_destination.write(generate_documentation(s, preserve_paths=preserve_paths, outdir=outdir,
+                                                               language=language, encoding=encoding,
+                                                               use_ascii=use_ascii,
+                                                               escape_html=escape_html, single_file=single_file))
                 print("pycco: {} -> {}".format(s, dest))
                 generated_files.append(dest)
             # Dycco uses Pythons AST so sometimes returns Syntax error for bad python code
@@ -624,6 +671,7 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
                     raise
             if sources:
                 next_file()
+
         next_file()
 
         if index:
@@ -691,36 +739,36 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--paths', action='store_true',
-                      help='Preserve path structure of original files')
+                        help='Preserve path structure of original files')
 
     parser.add_argument('-d', '--directory', action='store', type=str,
-                      dest='outdir', default='docs',
-                      help='The output directory that the rendered files should go to.')
+                        dest='outdir', default='docs',
+                        help='The output directory that the rendered files should go to.')
 
     parser.add_argument('-w', '--watch', action='store_true',
-                      help='Watch original files and re-generate documentation on changes')
+                        help='Watch original files and re-generate documentation on changes')
 
     parser.add_argument('-l', '--force-language', action='store', type=str,
-                      dest='language', default=None,
-                      help='Force the language for the given files')
+                        dest='language', default=None,
+                        help='Force the language for the given files')
 
     parser.add_argument('-i', '--generate_index', action='store_true',
-                      help='Generate an index.html document with sitemap content')
+                        help='Generate an index.html document with sitemap content')
 
     parser.add_argument('-s', '--skip-bad-files', '-e', '--ignore-errors',
-                      action='store_true',
-                      dest='skip_bad_files',
-                      help='Continue processing after hitting a bad file')
+                        action='store_true',
+                        dest='skip_bad_files',
+                        help='Continue processing after hitting a bad file')
 
     parser.add_argument('-a', '--asciidoc3', action='store_true', default=False, dest='use_ascii',
-                      help='Process with asciidoc3 instead of markdown (you will have to install asciidoc3, of course)')
+                        help='Process with asciidoc3 instead of markdown (you will have to install asciidoc3, of course)')
     parser.add_argument('--escape-html', action='store_true', default=False, dest='escape_html',
-                      help='Run the documentation through html.escape() before markdown or asciidoc3')
+                        help='Run the documentation through html.escape() before markdown or asciidoc3')
     parser.add_argument('-f', '--single-file', action='store_true', default=False, dest='single_file',
-        help='Just produce a .md or .adoc file in single-column to be processed externally')
+                        help='Just produce a .md or .adoc file in single-column to be processed externally')
 
     parser.add_argument('-u', '--underlines', action='store_true',
-                      help='Replace dots in file extension with underscores before adding the html extension (e.g. x.txt becomes x_txt.html)')
+                        help='Replace dots in file extension with underscores before adding the html extension (e.g. x.txt becomes x_txt.html)')
 
     parser.add_argument('sources', nargs='*')
 

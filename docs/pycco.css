@@ -1,6 +1,3 @@
-import pystache
-
-css = """\
 /*--------------------- Layout and Typography ----------------------------*/
 body {
   font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, FreeSerif, serif;
@@ -191,57 +188,3 @@ body .vc { color: #19469D }                     /* Name.Variable.Class */
 body .vg { color: #19469D }                     /* Name.Variable.Global */
 body .vi { color: #19469D }                     /* Name.Variable.Instance */
 body .il { color: #666666 }                     /* Literal.Number.Integer.Long */
-"""
-
-html = """\
-<!DOCTYPE html>
-<html>
-<head>
-  <meta http-equiv="content-type" content="text/html;charset=utf-8">
-  <title>{{ title }}</title>
-  <link rel="stylesheet" href="{{ stylesheet }}">
-</head>
-<body>
-<div id='container'>
-  <div id="background"></div>
-  {{#sources?}}
-  <div id="jump_to">
-    Jump To &hellip;
-    <div id="jump_wrapper">
-      <div id="jump_page">
-        {{#sources}}
-          <a class="source" href="{{ url }}">{{ basename }}</a>
-        {{/sources}}
-      </div>
-    </div>
-  </div>
-  {{/sources?}}
-  <div class='section'>
-    <div class='docs'><h1>{{ title }}</h1></div>
-  </div>
-  <div class='clearall'>
-  {{#sections}}
-  <div class='section' id='section-{{ num }}'>
-    <div class='docs'>
-      <div class='octowrap'>
-        <a class='octothorpe' href='#section-{{ num }}'>#</a>
-      </div>
-      {{{ docs_html }}}
-    </div>
-    <div class='code'>
-      {{{ code_html }}}
-    </div>
-  </div>
-  <div class='clearall'></div>
-  {{/sections}}
-</div>
-</body>
-"""
-
-
-def template(source):
-    return lambda context: pystache.render(source, context)
-
-
-# Create the template that we will use to generate the Pycco HTML page.
-pycco_template = template(html)
