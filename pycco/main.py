@@ -62,6 +62,7 @@ for this pycco version).
 
 # Import our external dependencies.
 import argparse
+import datetime
 import os
 import re
 import sys
@@ -478,7 +479,9 @@ def generate_html(source, sections, preserve_paths=True, outdir=None):
     for sect in sections:
         sect["code_html"] = re.sub(r"\{\{", r"__DOUBLE_OPEN_STACHE__", sect["code_html"])
 
-    rendered = pycco_template({"title": title, "stylesheet": csspath, "sections": sections, "source": source, })
+    date = datetime.datetime.utcnow().strftime('%d %b %Y')
+
+    rendered = pycco_template({"title": title, "stylesheet": csspath, "sections": sections, "source": source, "date": date})
 
     return re.sub(r"__DOUBLE_OPEN_STACHE__", "{{", rendered).encode("utf-8")
 
