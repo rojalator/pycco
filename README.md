@@ -15,11 +15,10 @@
 Pycco is a Python port of Docco: the original quick-and-dirty, hundred-line-
 long, literate-programming-style documentation generator. 
 This is a modified version that uses dycco 
-(from https://github.com/rojalator/dycco for Python files and adds a number
+(from https://github.com/rojalator/dycco) for Python files and adds a number
 of additional flags.
 
-For more information,
-see:
+For more information, see:
 
 https://rojalator.github.io/pycco/main_py.html
 
@@ -32,6 +31,7 @@ Ruby - http://rtomayko.github.com/rocco/
 Sh - http://rtomayko.github.com/shocco/
 
 https://pycco-docs.github.io/pycco/
+Note: does not seem to be accepting PR's, hence this fork.
 
 
 Installation

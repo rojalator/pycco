@@ -798,3 +798,23 @@ def main():
 # Run the script.
 if __name__ == "__main__":
     main()
+
+### Corner Cases
+
+# There are some corner-cases that need thinking about (or test files need to be created) that involve non-matching
+# comment-code pairs (Pycco wants paired blocks):-
+
+# * All code with no comments: we treat this as if there is a magic empty comment before the code.
+#   [<img src="./all_code.png" width="100%"/>](./all_code.png "No comments at all (click to enlarge)")
+
+# * All comments with no code: we should treat as having a magic empty code block
+#   [<img src="./all_comment.png" width="100%"/>](./all_comment.png "No code! (click to enlarge)")
+
+# * Code -> comment -> code: that is, no leading comment block (no matching comment/code pair): again,
+# create ourselves an empty comment to make it easy to handle.
+#   [<img src="./code_comment_code.png" width="100%"/>](./code_comment_code.png "No leading comment (click to enlarge)")
+
+# * Comment->code->comment: no matching comment/code pair at the end of the file. Surprise! we create a dummy, empty, code-block.
+#   [<img src="./comment_code_comment.png" width="100%"/>](./comment_code_comment.png "No trailing code (click to enlarge)")
+
+#
