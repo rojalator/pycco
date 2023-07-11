@@ -23,18 +23,18 @@ documentation generator. It produces HTML that displays your comments alongside
 your code. Comments are passed through <a href="http://daringfireball.net/projects/markdown/syntax">Markdown</a> and
 <a href="https://python-markdown.github.io/extensions/footnotes/">SmartyPants</a><sup id="fnref:extensions"><a class="footnote-ref" href="#fn:extensions">1</a></sup>, while code is passed through
 <a href="http://pygments.org/">Pygments</a> for syntax highlighting.</p>
+<p>This version has been modified to correctly handle Python and also to have
+a few additional output options.</p>
 <p>This page is the result of running Pycco against its own source file.</p>
 <p>If you install Pycco, you can run it from the command-line:</p>
 <pre><code>pycco src/*.py
 </code></pre>
 <p>This will generate linked HTML documentation for the named source files,
 saving it into a <code>docs</code> folder by default.</p>
-<p>The <a href="https://github.com/pycco-docs/pycco">source for Pycco</a> is available on GitHub,
-and released under the MIT license.
-This is a <a href="https://github.com/rojalator/pycco">modified version</a> that fixes a number
+<p>This is a <a href="https://github.com/rojalator/pycco">modified version</a> that fixes a number
 of bugs (<a href="https://github.com/pycco-docs/pycco/issues/120">such as this</a> and <a href="https://github.com/pycco-docs/pycco/issues/108">this</a>)
-by using a modified <a href="https://github.com/rojalator/dycco">dycco</a> to handle Python files.</p>
-<p>This version will also produce stand-alone <code>.md</code> files and <code>.adoc</code> (asciidoc) files.</p>
+by using a modified <a href="https://github.com/rojalator/dycco">dycco</a> to handle Python files.
+This version will also produce stand-alone <code>.md</code> files and <code>.adoc</code> (asciidoc) files.</p>
 <p>To install Pycco, simply</p>
 <pre><code>pip install pycco
 </code></pre>
@@ -50,6 +50,8 @@ python setup.py install
 <pre><code>pip install https://github.com/rojalator/dycco
 </code></pre>
 <p>for this pycco version).</p>
+<p>The original <a href="https://github.com/pycco-docs/pycco">source for Pycco</a> is available on GitHub,
+and released under the MIT license.</p>
 <div class="footnote">
 <hr />
 <ol>
@@ -75,18 +77,6 @@ python setup.py install
       <div class='octowrap'>
         <a class='octothorpe' href='#section-1'>#</a>
       </div>
-      <p>from <strong>future</strong> import absolute_import, print_function</p>
-    </div>
-    <div class='code'>
-      <div class="highlight"><pre></pre></div>
-    </div>
-  </div>
-  <div class='clearall'></div>
-  <div class='section' id='section-2'>
-    <div class='docs'>
-      <div class='octowrap'>
-        <a class='octothorpe' href='#section-2'>#</a>
-      </div>
       <p>Import our external dependencies.</p>
     </div>
     <div class='code'>
@@ -111,10 +101,10 @@ python setup.py install
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-3'>
+  <div class='section' id='section-2'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-3'>#</a>
+        <a class='octothorpe' href='#section-2'>#</a>
       </div>
       <p>This module contains all of our static resources.</p>
     </div>
@@ -123,10 +113,10 @@ python setup.py install
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-4'>
+  <div class='section' id='section-3'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-4'>#</a>
+        <a class='octothorpe' href='#section-3'>#</a>
       </div>
       <p>We have to muck about a bit because of asciidoc3&rsquo;s strange behaviour
  See: <a href="https://gitlab.com/asciidoc3/asciidoc3/-/issues/5">AttributeError: module &lsquo;asciidoc3&rsquo; has no attribute &lsquo;messages&rsquo;</a>
@@ -140,10 +130,10 @@ python setup.py install
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-5'>
+  <div class='section' id='section-4'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-5'>#</a>
+        <a class='octothorpe' href='#section-4'>#</a>
       </div>
       <p>We found a version of asciidoc3, so record where it is for later use by <code>preprocess_docs()</code></p>
     </div>
@@ -153,10 +143,10 @@ python setup.py install
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-6'>
+  <div class='section' id='section-5'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-6'>#</a>
+        <a class='octothorpe' href='#section-5'>#</a>
       </div>
       <h3><span id="main-documentation-generation-functions" href="main-documentation-generation-functions"> Main Documentation Generation Functions </span></h3>
     </div>
@@ -165,10 +155,10 @@ python setup.py install
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-7'>
+  <div class='section' id='section-6'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-7'>#</a>
+        <a class='octothorpe' href='#section-6'>#</a>
       </div>
       <p>Generate the documentation for a source file by reading it in, splitting it
 up into comment/code sections, highlighting them for the appropriate
@@ -186,10 +176,10 @@ language, and merging them into an HTML template.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-8'>
+  <div class='section' id='section-7'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-8'>#</a>
+        <a class='octothorpe' href='#section-7'>#</a>
       </div>
       <p>Helper function to allow documentation generation without file handling.</p>
     </div>
@@ -204,10 +194,10 @@ language, and merging them into an HTML template.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-9'>
+  <div class='section' id='section-8'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-9'>#</a>
+        <a class='octothorpe' href='#section-8'>#</a>
       </div>
       <p>For a <code>single_file</code> we just weld all the gubbins together, the code
  sections will have been marked as such via <code>preprocess_code()</code></p>
@@ -223,10 +213,10 @@ language, and merging them into an HTML template.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-10'>
+  <div class='section' id='section-9'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-10'>#</a>
+        <a class='octothorpe' href='#section-9'>#</a>
       </div>
       <p>We deal with the special case of python which, ironically, Pycco is rather bad at
 as it thinks that triple-strings can only be docstrings, when they can occur anywhere.
@@ -241,10 +231,10 @@ There is no guarantee the dycco can parse <strong>Cython</strong> files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-11'>
+  <div class='section' id='section-10'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-11'>#</a>
+        <a class='octothorpe' href='#section-10'>#</a>
       </div>
       <h4><span id="parse" href="parse"> PARSE </span></h4>
     </div>
@@ -253,10 +243,10 @@ There is no guarantee the dycco can parse <strong>Cython</strong> files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-12'>
+  <div class='section' id='section-11'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-12'>#</a>
+        <a class='octothorpe' href='#section-11'>#</a>
       </div>
       <p>Given a string of source code, parse out each comment and the code that
 follows it, and create an individual <strong>section</strong> for it.
@@ -295,10 +285,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-13'>
+  <div class='section' id='section-12'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-13'>#</a>
+        <a class='octothorpe' href='#section-12'>#</a>
       </div>
       <p><em>For Python, we just call dycco&rsquo;s routines via our <code>_parse_python()</code></em>
  It has to be valid code or we&rsquo;ll get SyntaxError from the AST handler</p>
@@ -310,10 +300,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-14'>
+  <div class='section' id='section-13'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-14'>#</a>
+        <a class='octothorpe' href='#section-13'>#</a>
       </div>
       <p>Skip over lines like &ldquo;#!/usr/bin/env python3&rdquo;</p>
     </div>
@@ -322,10 +312,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-15'>
+  <div class='section' id='section-14'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-15'>#</a>
+        <a class='octothorpe' href='#section-14'>#</a>
       </div>
       
     </div>
@@ -337,10 +327,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-16'>
+  <div class='section' id='section-15'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-16'>#</a>
+        <a class='octothorpe' href='#section-15'>#</a>
       </div>
       <p>If we used dycco for Python then we need to turn dycco&rsquo;s sections [that we got via <code>_parse_python()</code>]
  into our own by concatenating into strings and then <code>save()</code>-ing them</p>
@@ -350,10 +340,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-17'>
+  <div class='section' id='section-16'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-17'>#</a>
+        <a class='octothorpe' href='#section-16'>#</a>
       </div>
       <p>We sometimes get None returned as a list entry, so filter it out</p>
     </div>
@@ -363,10 +353,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-18'>
+  <div class='section' id='section-17'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-18'>#</a>
+        <a class='octothorpe' href='#section-17'>#</a>
       </div>
       <p>Trim off any spurious triple-quotes that we sometimes get</p>
     </div>
@@ -377,10 +367,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-19'>
+  <div class='section' id='section-18'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-19'>#</a>
+        <a class='octothorpe' href='#section-18'>#</a>
       </div>
       <p>For not-Python, setup the variables to get ready to check for multiline comments</p>
     </div>
@@ -397,17 +387,18 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-20'>
+  <div class='section' id='section-19'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-20'>#</a>
+        <a class='octothorpe' href='#section-19'>#</a>
       </div>
-      <p>Note that the <code>continue</code> saves a lot of <code>if...else</code> heartache
- What about // some text // some more text
- or /<em> comment </em>/ // comment
- or /<em> comment </em>/  /<em> another comment </em>/
- or /<em> comment </em>/ x = 5; /<em> another comment </em>/
- or // summat /<em> comment </em>/</p>
+      <p>Note that the <code>continue</code> saves a lot of <code>if...else</code> heartache</p>
+<p>What about:-</p>
+<p>// some text // some more text</p>
+<p>or /<em> comment </em>/ // comment</p>
+<p>or /<em> comment </em>/  /<em> another comment </em>/</p>
+<p>or /<em> comment </em>/ x = 5; /<em> another comment </em>/</p>
+<p>or // summat /<em> comment </em>/</p>
     </div>
     <div class='code'>
       <div class="highlight"><pre>            <span class="n">stripped_line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
@@ -415,10 +406,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-21'>
+  <div class='section' id='section-20'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-21'>#</a>
+        <a class='octothorpe' href='#section-20'>#</a>
       </div>
       <p>Case 3: multi-line on a single line:
  it&rsquo;s really single line, so turn it into one</p>
@@ -431,10 +422,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-22'>
+  <div class='section' id='section-21'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-22'>#</a>
+        <a class='octothorpe' href='#section-21'>#</a>
       </div>
       <p>Convert multi-comments when we find them: we check in_multi_comment
  so that we can deal with coffee-script&rsquo;s ### and ###</p>
@@ -444,10 +435,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-23'>
+  <div class='section' id='section-22'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-23'>#</a>
+        <a class='octothorpe' href='#section-22'>#</a>
       </div>
       <p>Case 1: just starts with a multi-line marker</p>
     </div>
@@ -460,14 +451,13 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-24'>
+  <div class='section' id='section-23'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-24'>#</a>
+        <a class='octothorpe' href='#section-23'>#</a>
       </div>
       <p>Case 6: We&rsquo;re in a multi-comment so just add it
- DON&rsquo;T ADD THE STRIPPED LINE
- converted_lines.append(single_line_comment_symbol + line)</p>
+ DON&rsquo;T ADD THE STRIPPED LINE</p>
     </div>
     <div class='code'>
       <div class="highlight"><pre>                <span class="n">converted_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">single_line_comment_symbol</span><span class="p">,</span> <span class="n">stripped_line</span><span class="p">]))</span>
@@ -476,13 +466,12 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-25'>
+  <div class='section' id='section-24'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-25'>#</a>
+        <a class='octothorpe' href='#section-24'>#</a>
       </div>
-      <p>Case 2: Don&rsquo;t strip the leading spaces
- stripped_line = line.rstrip().removesuffix(multi_comment_end)</p>
+      <p>Case 2: Don&rsquo;t strip the leading spaces</p>
     </div>
     <div class='code'>
       <div class="highlight"><pre>                <span class="n">stripped_line</span> <span class="o">=</span> <span class="n">stripped_line</span><span class="o">.</span><span class="n">removesuffix</span><span class="p">(</span><span class="n">multi_comment_end</span><span class="p">)</span>
@@ -492,24 +481,28 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
+  <div class='section' id='section-25'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-25'>#</a>
+      </div>
+      <p>Case 7 is a trailing comment which is left in the code</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
   <div class='section' id='section-26'>
     <div class='docs'>
       <div class='octowrap'>
         <a class='octothorpe' href='#section-26'>#</a>
       </div>
-      <p>TODO: not sure about the following: it converts trailing /<em>&hellip;</em>/ into //
- TODO: BUT // is not moved into the comment area whereas the old code WOULD
- TODO: move /<em>&hellip;</em>/ into it
- if stripped_line.endswith(multi_comment_end) and multi_comment_start in stripped_line:
-     # Case 7
-     # break it into the code and the comment, removing markers
-     snipped:list = line.removesuffix(multi_comment_end).split(multi_comment_start)
-     # Then join it together using the single line comment marker
-     converted_lines.append(single_line_comment_symbol.join(snipped))
-     continue</p>
+      <p>Case 5: If we reach here, we&rsquo;ve just got plain old code, at last!</p>
     </div>
     <div class='code'>
-      <div class="highlight"><pre></pre></div>
+      <div class="highlight"><pre>            <span class="n">converted_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">converted_lines</span><span class="p">):</span></pre></div>
     </div>
   </div>
   <div class='clearall'></div>
@@ -517,33 +510,6 @@ and the last line.</p>
     <div class='docs'>
       <div class='octowrap'>
         <a class='octothorpe' href='#section-27'>#</a>
-      </div>
-      <p>Case 5: If we reach here, we&rsquo;ve just got plain old code, at last</p>
-    </div>
-    <div class='code'>
-      <div class="highlight"><pre>            <span class="n">converted_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></pre></div>
-    </div>
-  </div>
-  <div class='clearall'></div>
-  <div class='section' id='section-28'>
-    <div class='docs'>
-      <div class='octowrap'>
-        <a class='octothorpe' href='#section-28'>#</a>
-      </div>
-      <p>for i, line in enumerate(converted_lines):
-     print(i, line)
- assert False
- in_multi_comment = False</p>
-    </div>
-    <div class='code'>
-      <div class="highlight"><pre>        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">converted_lines</span><span class="p">):</span></pre></div>
-    </div>
-  </div>
-  <div class='clearall'></div>
-  <div class='section' id='section-29'>
-    <div class='docs'>
-      <div class='octowrap'>
-        <a class='octothorpe' href='#section-29'>#</a>
       </div>
       <p>Only go into multiline comments section when one of the delimiters is
  found to be at the start of a line</p>
@@ -566,10 +532,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-30'>
+  <div class='section' id='section-28'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-30'>#</a>
+        <a class='octothorpe' href='#section-28'>#</a>
       </div>
       <p>Get rid of the delimiters so that they aren&rsquo;t in the final
  docs</p>
@@ -587,10 +553,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-31'>
+  <div class='section' id='section-29'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-31'>#</a>
+        <a class='octothorpe' href='#section-29'>#</a>
       </div>
       <p>Remove leading spaces</p>
     </div>
@@ -615,10 +581,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-32'>
+  <div class='section' id='section-30'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-32'>#</a>
+        <a class='octothorpe' href='#section-30'>#</a>
       </div>
       <h3><span id="preprocessing-the-comments" href="preprocessing-the-comments"> Preprocessing the comments </span></h3>
     </div>
@@ -627,10 +593,10 @@ and the last line.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-33'>
+  <div class='section' id='section-31'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-33'>#</a>
+        <a class='octothorpe' href='#section-31'>#</a>
       </div>
       <p>Add cross-references before having the text processed by markdown.  It&rsquo;s
 possible to reference another file, like this : <code>[[main.py]]</code> which renders
@@ -648,10 +614,10 @@ signs:
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-34'>
+  <div class='section' id='section-32'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-34'>#</a>
+        <a class='octothorpe' href='#section-32'>#</a>
       </div>
       
     </div>
@@ -661,10 +627,10 @@ signs:
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-35'>
+  <div class='section' id='section-33'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-35'>#</a>
+        <a class='octothorpe' href='#section-33'>#</a>
       </div>
       
     </div>
@@ -673,10 +639,10 @@ signs:
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-36'>
+  <div class='section' id='section-34'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-36'>#</a>
+        <a class='octothorpe' href='#section-34'>#</a>
       </div>
       <p>Check if the match contains an anchor</p>
     </div>
@@ -693,10 +659,10 @@ signs:
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-37'>
+  <div class='section' id='section-35'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-37'>#</a>
+        <a class='octothorpe' href='#section-35'>#</a>
       </div>
       <p>Replace equals-sign-formatted section names with anchor links.</p>
     </div>
@@ -710,10 +676,10 @@ signs:
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-38'>
+  <div class='section' id='section-36'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-38'>#</a>
+        <a class='octothorpe' href='#section-36'>#</a>
       </div>
       <h3><span id="highlighting-the-source-code" href="highlighting-the-source-code"> Highlighting the source code </span></h3>
     </div>
@@ -722,10 +688,10 @@ signs:
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-39'>
+  <div class='section' id='section-37'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-39'>#</a>
+        <a class='octothorpe' href='#section-37'>#</a>
       </div>
       <p>Highlights a single chunk of code using the <strong>Pygments</strong> module, and runs
 the text of its corresponding comment through <strong>Markdown</strong> or <strong>Asciidoc3</strong>
@@ -742,10 +708,10 @@ wherever our markers occur.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-40'>
+  <div class='section' id='section-38'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-40'>#</a>
+        <a class='octothorpe' href='#section-38'>#</a>
       </div>
       <p><em>(If <code>single_file</code> is True, we would just dump the file with markers and not bother with pygments gubbins here)</em></p>
     </div>
@@ -764,13 +730,13 @@ wherever our markers occur.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-41'>
+  <div class='section' id='section-39'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-41'>#</a>
+        <a class='octothorpe' href='#section-39'>#</a>
       </div>
       <p><strong>Single_file</strong>: We need to bracket the code section with the appropriate markers.
- We can just get dycco to do it for us via its <code>preprocess_code()</code>: however, it
+ We can just get dycco to do it for us via its <code>preprocess_code()</code>: however,
  that expects a list and the language</p>
     </div>
     <div class='code'>
@@ -780,10 +746,10 @@ wherever our markers occur.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-42'>
+  <div class='section' id='section-40'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-42'>#</a>
+        <a class='octothorpe' href='#section-40'>#</a>
       </div>
       <p>Otherwise, carry on as before</p>
     </div>
@@ -796,10 +762,10 @@ wherever our markers occur.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-43'>
+  <div class='section' id='section-41'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-43'>#</a>
+        <a class='octothorpe' href='#section-41'>#</a>
       </div>
       <p>We won&rsquo;t do any formatting if <code>single_file</code> is set&hellip;</p>
     </div>
@@ -808,10 +774,10 @@ wherever our markers occur.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-44'>
+  <div class='section' id='section-42'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-44'>#</a>
+        <a class='octothorpe' href='#section-42'>#</a>
       </div>
       <p>&hellip;so process the documentation via asciidoc3 - using dycco, whose <code>preprocess_docs()</code> expects a list</p>
     </div>
@@ -822,10 +788,10 @@ wherever our markers occur.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-45'>
+  <div class='section' id='section-43'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-45'>#</a>
+        <a class='octothorpe' href='#section-43'>#</a>
       </div>
       <p>Otherwise, just do as we always did&hellip; use Markdown</p>
     </div>
@@ -843,10 +809,10 @@ wherever our markers occur.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-46'>
+  <div class='section' id='section-44'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-46'>#</a>
+        <a class='octothorpe' href='#section-44'>#</a>
       </div>
       <h3><span id="html-code-generation" href="html-code-generation"> HTML Code generation </span></h3>
     </div>
@@ -855,10 +821,10 @@ wherever our markers occur.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-47'>
+  <div class='section' id='section-45'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-47'>#</a>
+        <a class='octothorpe' href='#section-45'>#</a>
       </div>
       <p>Once all of the code is finished highlighting, we can generate the HTML
 file and write out the documentation. Pass the completed sections into the
@@ -883,10 +849,10 @@ rendered template and change the identifier back to <code>{{</code>.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-48'>
+  <div class='section' id='section-46'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-48'>#</a>
+        <a class='octothorpe' href='#section-46'>#</a>
       </div>
       <h3><span id="helpers-&-setup" href="helpers-&-setup"> Helpers &amp; Setup </span></h3>
     </div>
@@ -895,10 +861,10 @@ rendered template and change the identifier back to <code>{{</code>.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-49'>
+  <div class='section' id='section-47'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-49'>#</a>
+        <a class='octothorpe' href='#section-47'>#</a>
       </div>
       <p>Build out the appropriate matchers and delimiters for each language.</p>
     </div>
@@ -909,10 +875,10 @@ rendered template and change the identifier back to <code>{{</code>.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-50'>
+  <div class='section' id='section-48'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-50'>#</a>
+        <a class='octothorpe' href='#section-48'>#</a>
       </div>
       <p>Does the line begin with a comment?</p>
     </div>
@@ -921,10 +887,10 @@ rendered template and change the identifier back to <code>{{</code>.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-51'>
+  <div class='section' id='section-49'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-51'>#</a>
+        <a class='octothorpe' href='#section-49'>#</a>
       </div>
       <p>The dividing token we feed into Pygments, to delimit the boundaries between
  sections.</p>
@@ -934,10 +900,10 @@ rendered template and change the identifier back to <code>{{</code>.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-52'>
+  <div class='section' id='section-50'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-52'>#</a>
+        <a class='octothorpe' href='#section-50'>#</a>
       </div>
       <p>The mirror of <code>divider_text</code> that we expect Pygments to return. We can split
  on this to recover the original sections.</p>
@@ -948,10 +914,10 @@ rendered template and change the identifier back to <code>{{</code>.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-53'>
+  <div class='section' id='section-51'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-53'>#</a>
+        <a class='octothorpe' href='#section-51'>#</a>
       </div>
       <p>Get the Pygments Lexer for this language.</p>
     </div>
@@ -962,10 +928,10 @@ rendered template and change the identifier back to <code>{{</code>.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-54'>
+  <div class='section' id='section-52'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-54'>#</a>
+        <a class='octothorpe' href='#section-52'>#</a>
       </div>
       <p>Get the current language we&rsquo;re documenting, based on the extension.</p>
     </div>
@@ -992,10 +958,10 @@ rendered template and change the identifier back to <code>{{</code>.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-55'>
+  <div class='section' id='section-53'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-55'>#</a>
+        <a class='octothorpe' href='#section-53'>#</a>
       </div>
       <p>If pygments can&rsquo;t find any lexers, it will raise its own subclass of ValueError. We will catch it and raise
  ours for consistency.</p>
@@ -1005,10 +971,10 @@ rendered template and change the identifier back to <code>{{</code>.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-56'>
+  <div class='section' id='section-54'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-56'>#</a>
+        <a class='octothorpe' href='#section-54'>#</a>
       </div>
       <p>Compute the destination HTML path for an input source file path. If the
 source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.html</code>.</p>
@@ -1025,14 +991,15 @@ source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.ht
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-57'>
+  <div class='section' id='section-55'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-57'>#</a>
+        <a class='octothorpe' href='#section-55'>#</a>
       </div>
       <p>Now we want to, if required, replace dots in the file-name with
  underscores in case we have, say, <code>xyz.py</code> and <code>xyz.css</code> where the
- last file written would be <code>xyz.html</code>. Instead, produce
+ last file written would be <code>xyz.html</code> for the css file and we would lose
+ the output for the Python file. Instead, produce
  <code>xyz_py.html</code> and <code>xyz_css.html</code></p>
     </div>
     <div class='code'>
@@ -1040,10 +1007,10 @@ source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.ht
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-58'>
+  <div class='section' id='section-56'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-58'>#</a>
+        <a class='octothorpe' href='#section-56'>#</a>
       </div>
       <p>Get the old file extension and put it back on and then replace the dots</p>
     </div>
@@ -1056,10 +1023,10 @@ source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.ht
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-59'>
+  <div class='section' id='section-57'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-59'>#</a>
+        <a class='octothorpe' href='#section-57'>#</a>
       </div>
       <p>If <code>join()</code> is passed an absolute path, it will ignore any earlier path
  elements. We will force <code>outdir</code> to the beginning of the path to avoid
@@ -1072,10 +1039,10 @@ source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.ht
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-60'>
+  <div class='section' id='section-58'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-60'>#</a>
+        <a class='octothorpe' href='#section-58'>#</a>
       </div>
       <p>Shift items off the front of the <code>list</code> until it is empty, then return <code>default</code>.</p>
     </div>
@@ -1088,10 +1055,10 @@ source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.ht
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-61'>
+  <div class='section' id='section-59'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-61'>#</a>
+        <a class='octothorpe' href='#section-59'>#</a>
       </div>
       
     </div>
@@ -1100,10 +1067,10 @@ source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.ht
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-62'>
+  <div class='section' id='section-60'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-62'>#</a>
+        <a class='octothorpe' href='#section-60'>#</a>
       </div>
       <p>The unicode category for control characters starts with &lsquo;C&rsquo;</p>
     </div>
@@ -1112,10 +1079,10 @@ source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.ht
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-63'>
+  <div class='section' id='section-61'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-63'>#</a>
+        <a class='octothorpe' href='#section-61'>#</a>
       </div>
       <p>Sanitize directory string and ensure that the destination directory exists.</p>
     </div>
@@ -1128,10 +1095,10 @@ source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.ht
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-64'>
+  <div class='section' id='section-62'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-64'>#</a>
+        <a class='octothorpe' href='#section-62'>#</a>
       </div>
       <p>The start of each Pygments highlight block.</p>
     </div>
@@ -1140,10 +1107,10 @@ source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.ht
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-65'>
+  <div class='section' id='section-63'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-65'>#</a>
+        <a class='octothorpe' href='#section-63'>#</a>
       </div>
       <p>The end of each Pygments highlight block.</p>
     </div>
@@ -1152,10 +1119,10 @@ source is <code>lib/example.py</code>, the HTML will be at <code>docs/example.ht
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-66'>
+  <div class='section' id='section-64'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-66'>#</a>
+        <a class='octothorpe' href='#section-64'>#</a>
       </div>
       <p>This function will iterate through the list of sources and if a directory
 is encountered it will walk the tree for any files.</p>
@@ -1173,10 +1140,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-67'>
+  <div class='section' id='section-65'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-67'>#</a>
+        <a class='octothorpe' href='#section-65'>#</a>
       </div>
       <p>For each source file passed as argument, generate the documentation.</p>
     </div>
@@ -1189,10 +1156,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-68'>
+  <div class='section' id='section-66'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-68'>#</a>
+        <a class='octothorpe' href='#section-66'>#</a>
       </div>
       <p>We have a default extension of <code>html</code>&hellip;</p>
     </div>
@@ -1202,10 +1169,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-69'>
+  <div class='section' id='section-67'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-69'>#</a>
+        <a class='octothorpe' href='#section-67'>#</a>
       </div>
       <p>&hellip;but if we are wanting a single file, use Markdown&rsquo;s or
  Asciidoc3&rsquo;s extensions</p>
@@ -1215,10 +1182,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-70'>
+  <div class='section' id='section-68'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-70'>#</a>
+        <a class='octothorpe' href='#section-68'>#</a>
       </div>
       <p>Make a copy of sources given on the command line. <code>main()</code> needs the
  original list when monitoring for changed files.</p>
@@ -1228,10 +1195,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-71'>
+  <div class='section' id='section-69'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-71'>#</a>
+        <a class='octothorpe' href='#section-69'>#</a>
       </div>
       <p>Proceed to generating the documentation.</p>
     </div>
@@ -1245,10 +1212,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-72'>
+  <div class='section' id='section-70'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-72'>#</a>
+        <a class='octothorpe' href='#section-70'>#</a>
       </div>
       
     </div>
@@ -1270,12 +1237,12 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-73'>
+  <div class='section' id='section-71'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-73'>#</a>
+        <a class='octothorpe' href='#section-71'>#</a>
       </div>
-      <p>Dycco uses Pythons AST so sometimes returns Syntax error for bad python code</p>
+      <p>Dycco uses Pythons AST so sometimes returns <code>SyntaxError</code> for bad python code</p>
     </div>
     <div class='code'>
       <div class="highlight"><pre>            <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">UnicodeDecodeError</span><span class="p">,</span> <span class="ne">SyntaxError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
@@ -1293,10 +1260,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-74'>
+  <div class='section' id='section-72'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-74'>#</a>
+        <a class='octothorpe' href='#section-72'>#</a>
       </div>
       <p>Monitor each source file and re-generate documentation on change.</p>
     </div>
@@ -1305,10 +1272,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-75'>
+  <div class='section' id='section-73'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-75'>#</a>
+        <a class='octothorpe' href='#section-73'>#</a>
       </div>
       <p>The watchdog modules are imported in <code>main()</code> but we need to re-import
  here to bring them into the local namespace.</p>
@@ -1319,10 +1286,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-76'>
+  <div class='section' id='section-74'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-76'>#</a>
+        <a class='octothorpe' href='#section-74'>#</a>
       </div>
       <p>Watchdog operates on absolute paths, so map those to original paths
  as specified on the command line.</p>
@@ -1333,10 +1300,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-77'>
+  <div class='section' id='section-75'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-77'>#</a>
+        <a class='octothorpe' href='#section-75'>#</a>
       </div>
       <p>A handler for recompiling files which triggered watchdog events.</p>
     </div>
@@ -1345,10 +1312,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-78'>
+  <div class='section' id='section-76'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-78'>#</a>
+        <a class='octothorpe' href='#section-76'>#</a>
       </div>
       <p>Regenerate documentation for a file which triggered an event.</p>
     </div>
@@ -1357,10 +1324,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-79'>
+  <div class='section' id='section-77'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-79'>#</a>
+        <a class='octothorpe' href='#section-77'>#</a>
       </div>
       <p>Re-generate documentation from a source file if it was listed on
  the command line. Watchdog monitors whole directories, so other
@@ -1374,10 +1341,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-80'>
+  <div class='section' id='section-78'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-80'>#</a>
+        <a class='octothorpe' href='#section-78'>#</a>
       </div>
       <p>Set up an observer which monitors all directories for files given on
  the command line and notifies the handler defined above.</p>
@@ -1391,10 +1358,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-81'>
+  <div class='section' id='section-79'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-81'>#</a>
+        <a class='octothorpe' href='#section-79'>#</a>
       </div>
       <p>Run the file change monitoring loop until the user hits Ctrl-C.</p>
     </div>
@@ -1409,10 +1376,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-82'>
+  <div class='section' id='section-80'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-82'>#</a>
+        <a class='octothorpe' href='#section-80'>#</a>
       </div>
       <p>Hook spot for the console script.</p>
     </div>
@@ -1457,10 +1424,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-83'>
+  <div class='section' id='section-81'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-83'>#</a>
+        <a class='octothorpe' href='#section-81'>#</a>
       </div>
       <p>If the -w / --watch option was present, monitor the source directories
  for changes and re-generate documentation for source files whenever they
@@ -1477,10 +1444,10 @@ is encountered it will walk the tree for any files.</p>
     </div>
   </div>
   <div class='clearall'></div>
-  <div class='section' id='section-84'>
+  <div class='section' id='section-82'>
     <div class='docs'>
       <div class='octowrap'>
-        <a class='octothorpe' href='#section-84'>#</a>
+        <a class='octothorpe' href='#section-82'>#</a>
       </div>
       <p>Run the script.</p>
     </div>
@@ -1495,6 +1462,6 @@ is encountered it will walk the tree for any files.</p>
 </div>
     <footer>
       Generated by <a href="https://github.com/rojalator/pycco">Pycco</a>.
-      Last updated 09 Jul 2023.
+      Last updated 11 Jul 2023.
     </footer>
 </body>

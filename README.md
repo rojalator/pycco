@@ -23,10 +23,6 @@ see:
 
 https://rojalator.github.io/pycco/main_py.html
 
-Originally at:
-
-https://pycco-docs.github.io/pycco/
-
 Others:-
 
 CoffeeScript (Original) - http://jashkenas.github.com/docco/
@@ -34,6 +30,8 @@ CoffeeScript (Original) - http://jashkenas.github.com/docco/
 Ruby - http://rtomayko.github.com/rocco/
 
 Sh - http://rtomayko.github.com/shocco/
+
+https://pycco-docs.github.io/pycco/
 
 
 Installation

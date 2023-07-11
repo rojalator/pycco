@@ -7,6 +7,9 @@ your code. Comments are passed through [Markdown][markdown] and
 [SmartyPants][smartypants][^extensions], while code is passed through
 [Pygments](http://pygments.org/) for syntax highlighting.
 
+This version has been modified to correctly handle Python and also to have
+a few additional output options.
+
 [markdown]: http://daringfireball.net/projects/markdown/syntax
 [smartypants]: https://python-markdown.github.io/extensions/footnotes/
 
@@ -29,12 +32,9 @@ If you install Pycco, you can run it from the command-line:
 This will generate linked HTML documentation for the named source files,
 saving it into a `docs` folder by default.
 
-The [source for Pycco](https://github.com/pycco-docs/pycco) is available on GitHub,
-and released under the MIT license.
 This is a [modified version](https://github.com/rojalator/pycco) that fixes a number
 of bugs ([such as this](https://github.com/pycco-docs/pycco/issues/120) and [this](https://github.com/pycco-docs/pycco/issues/108))
 by using a modified [dycco](https://github.com/rojalator/dycco) to handle Python files.
-
 This version will also produce stand-alone `.md` files and `.adoc` (asciidoc) files.
 
 To install Pycco, simply
@@ -56,9 +56,11 @@ or
     pip install https://github.com/rojalator/dycco
 
 for this pycco version).
+
+The original [source for Pycco](https://github.com/pycco-docs/pycco) is available on GitHub,
+and released under the MIT license.
 """
 
-# from __future__ import absolute_import, print_function
 
 # Import our external dependencies.
 import argparse
@@ -230,11 +232,18 @@ def parse(source_code: str, source_language: dict):
         converted_lines = []
         for i, line in enumerate(lines):
             # Note that the `continue` saves a lot of `if...else` heartache
-            # What about // some text // some more text
-            # or /* comment */ // comment
-            # or /* comment */  /* another comment */
-            # or /* comment */ x = 5; /* another comment */
-            # or // summat /* comment */
+            #
+            # What about:-
+            #
+            #   // some text // some more text
+            #
+            #   or /* comment */ // comment
+            #
+            #   or /* comment */  /* another comment */
+            #
+            #   or /* comment */ x = 5; /* another comment */
+            #
+            #   or // summat /* comment */
             stripped_line = line.strip()
 
             if stripped_line.startswith(multi_comment_start) and stripped_line.endswith(multi_comment_end):
@@ -257,36 +266,21 @@ def parse(source_code: str, source_language: dict):
             if in_multi_comment and not stripped_line.endswith(multi_comment_end):
                 # Case 6: We're in a multi-comment so just add it
                 # DON'T ADD THE STRIPPED LINE
-                # converted_lines.append(single_line_comment_symbol + line)
                 converted_lines.append(' '.join([single_line_comment_symbol, stripped_line]))
                 continue
 
             if in_multi_comment and stripped_line.endswith(multi_comment_end):
                 # Case 2: Don't strip the leading spaces
-                # stripped_line = line.rstrip().removesuffix(multi_comment_end)
                 stripped_line = stripped_line.removesuffix(multi_comment_end)
                 converted_lines.append(' '.join([single_line_comment_symbol, stripped_line]))
                 in_multi_comment = False
                 continue
 
-            # TODO: not sure about the following: it converts trailing /*...*/ into //
-            # TODO: BUT // is not moved into the comment area whereas the old code WOULD
-            # TODO: move /*...*/ into it
-            # if stripped_line.endswith(multi_comment_end) and multi_comment_start in stripped_line:
-            #     # Case 7
-            #     # break it into the code and the comment, removing markers
-            #     snipped:list = line.removesuffix(multi_comment_end).split(multi_comment_start)
-            #     # Then join it together using the single line comment marker
-            #     converted_lines.append(single_line_comment_symbol.join(snipped))
-            #     continue
+            # Case 7 is a trailing comment which is left in the code
 
-            # Case 5: If we reach here, we've just got plain old code, at last
+            # Case 5: If we reach here, we've just got plain old code, at last!
             converted_lines.append(line)
 
-        # for i, line in enumerate(converted_lines):
-        #     print(i, line)
-        # assert False
-        # in_multi_comment = False
         for i, line in enumerate(converted_lines):
             # Only go into multiline comments section when one of the delimiters is
             # found to be at the start of a line
@@ -424,7 +418,7 @@ def highlight(sections, language, preserve_paths=True, outdir=None, use_ascii=Fa
     for i, section in enumerate(sections):
         if single_file:
             # **Single_file**: We need to bracket the code section with the appropriate markers.
-            # We can just get dycco to do it for us via its `preprocess_code()`: however, it
+            # We can just get dycco to do it for us via its `preprocess_code()`: however,
             # that expects a list and the language
             section['code_html'] = preprocess_code(list([section['code_text']]), use_ascii=use_ascii,
                                                    raw=single_file, language_name=language['name'])
@@ -558,7 +552,8 @@ def destination(filepath, preserve_paths=True, outdir=None, replace_dots=False, 
         name = filename
     # Now we want to, if required, replace dots in the file-name with
     # underscores in case we have, say, `xyz.py` and `xyz.css` where the
-    # last file written would be `xyz.html`. Instead, produce
+    # last file written would be `xyz.html` for the css file and we would lose
+    # the output for the Python file. Instead, produce
     # `xyz_py.html` and `xyz_css.html`
     if replace_dots:
         # Get the old file extension and put it back on and then replace the dots
@@ -666,7 +661,7 @@ def process(sources, preserve_paths=True, outdir=None, language=None,
                                                                escape_html=escape_html, single_file=single_file))
                 print("pycco: {} -> {}".format(s, dest))
                 generated_files.append(dest)
-            # Dycco uses Pythons AST so sometimes returns Syntax error for bad python code
+            # Dycco uses Pythons AST so sometimes returns `SyntaxError` for bad Python code
             except (ValueError, UnicodeDecodeError, SyntaxError) as e:
                 if skip:
                     print("pycco [FAILURE]: {}, {}".format(s, e))
