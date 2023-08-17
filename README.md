@@ -14,6 +14,13 @@
 
 Pycco is a Python port of Docco: the original quick-and-dirty, hundred-line-
 long, literate-programming-style documentation generator. 
+
+Example output:-
+  * https://rojalator.github.io/session3/literate/session3/SessionManager.html
+  * https://rojalator.github.io/pycco/main_py.html (includes a diagram)
+  * https://rojalator.github.io/dycco/dycco.html
+
+
 This is a modified version that uses dycco 
 (from https://github.com/rojalator/dycco) for Python files and adds a number
 of additional flags.
